@@ -78,15 +78,71 @@ static int path_lua( lua_State *L )
 }
 
 
+// close db
+#define close_groonga( g ) do { \
+    grn_obj *db = grn_ctx_db( &(g)->ctx ); \
+    if( db ){ \
+        grn_obj_unlink( &(g)->ctx, db ); \
+    } \
+}while(0)
+
+
+static int close_lua( lua_State *L )
+{
+    lgroonga_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    
+    close_groonga( g );
+    
+    return 0;
+}
+
+
+static int open_lua( lua_State *L )
+{
+    lgroonga_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    const char *path = luaL_checkstring( L, 2 );
+    
+    // close current db
+    close_groonga( g );
+    if( grn_db_open( &g->ctx, path ) ){
+        lua_pushboolean( L, 1 );
+        return 1;
+    }
+    
+    // got error
+    lua_pushboolean( L, 0 );
+    lua_pushstring( L, g->ctx.errbuf );
+    
+    return 1;
+}
+
+
+static int create_lua( lua_State *L )
+{
+    lgroonga_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    const char *path = luaL_checkstring( L, 2 );
+    
+    // close current db
+    close_groonga( g );
+    if( grn_db_create( &g->ctx, path, NULL ) ){
+        lua_pushboolean( L, 1 );
+        return 1;
+    }
+    
+    // got error
+    lua_pushboolean( L, 0 );
+    lua_pushstring( L, g->ctx.errbuf );
+    
+    return 1;
+}
+
+
 static int gc_lua( lua_State *L )
 {
     lgroonga_t *g = (lgroonga_t*)lua_touserdata( L, 1 );
-    grn_obj *db = grn_ctx_db( &g->ctx );
     
     // close db
-    if( db ){
-        grn_obj_unlink( &g->ctx, db );
-    }
+    close_groonga( g );
     // free
     grn_ctx_fin( &g->ctx );
     
@@ -101,44 +157,22 @@ static int tostring_lua( lua_State *L )
 }
 
 
-// create or open database
-#define create_groonga( g, path ) grn_db_create( &(g)->ctx, path, NULL )
-#define open_groonga( g, path )   grn_db_open( &(g)->ctx, path )
-
-// allocate lua object
-#define alloc_groonga( L, fn ) do { \
-    const char *path = luaL_checkstring( L, 1 ); \
-    lgroonga_t *g = NULL; \
-    /* alloc userdata */ \
-    if( !( g = lua_newuserdata( L, sizeof( lgroonga_t ) ) ) ){ \
-        lua_pushnil( L ); \
-        lua_pushstring( L, strerror( errno ) ); \
-        return 2; \
-    } \
-    /* init context and open or create database */ \
-    grn_ctx_init( &g->ctx, 0 ); \
-    if( !fn( g, path ) ){ \
-        /* got error */ \
-        lua_pushnil( L ); \
-        lua_pushstring( L, g->ctx.errbuf ); \
-        grn_ctx_fin( &g->ctx ); \
-        return 2; \
-    } \
-    lstate_setmetatable( L, MODULE_MT ); \
-}while(0)
-
-
-static int open_lua( lua_State *L )
-{
-    alloc_groonga( L, open_groonga );
-    return 1;
-}
-
-
 static int new_lua( lua_State *L )
 {
-    alloc_groonga( L, create_groonga );
-    return 1;
+    lgroonga_t *g = NULL;
+    
+    // alloc context
+    if( ( g = lua_newuserdata( L, sizeof( lgroonga_t ) ) ) ){
+        grn_ctx_init( &g->ctx, 0 );
+        lstate_setmetatable( L, MODULE_MT );
+        return 1;
+    }
+    
+    // got error
+    lua_pushnil( L );
+    lua_pushstring( L, strerror( errno ) );
+    
+    return 2;
 }
 
 
@@ -150,6 +184,9 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { NULL, NULL }
     };
     struct luaL_Reg methods[] = {
+        { "create", create_lua },
+        { "open", open_lua },
+        { "close", close_lua },
         { "path", path_lua },
         { NULL, NULL }
     };
@@ -182,7 +219,6 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     // add allocator
     lua_newtable( L );
     lstate_fn2tbl( L, "new", new_lua );
-    lstate_fn2tbl( L, "open", open_lua );
 
     return 1;
 }
