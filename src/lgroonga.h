@@ -56,6 +56,11 @@
     lua_rawset(L,-3); \
 }while(0)
 
+#define lstate_int2tbl(L,k,v) do{ \
+    lua_pushstring(L,k); \
+    lua_pushinteger(L,v); \
+    lua_rawset(L,-3); \
+}while(0)
 
 #define GROONGA_MT   "groonga"
 
