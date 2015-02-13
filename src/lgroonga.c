@@ -62,6 +62,18 @@ typedef struct {
 } lgroonga_t;
 
 
+
+// MARK: database API
+
+// close db
+#define close_groonga( g ) do { \
+    grn_obj *db = grn_ctx_db( &(g)->ctx ); \
+    if( db ){ \
+        grn_obj_unlink( &(g)->ctx, db ); \
+    } \
+}while(0)
+
+
 static int path_lua( lua_State *L )
 {
     lgroonga_t *g = luaL_checkudata( L, 1, MODULE_MT );
@@ -78,13 +90,21 @@ static int path_lua( lua_State *L )
 }
 
 
-// close db
-#define close_groonga( g ) do { \
-    grn_obj *db = grn_ctx_db( &(g)->ctx ); \
-    if( db ){ \
-        grn_obj_unlink( &(g)->ctx, db ); \
-    } \
-}while(0)
+static int touch_lua( lua_State *L )
+{
+    lgroonga_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    grn_obj *db = grn_ctx_db( &g->ctx );
+    
+    if( db ){
+        grn_db_touch( &g->ctx, db );
+        lua_pushboolean( L, 1 );
+    }
+    else {
+        lua_pushboolean( L, 0 );
+    }
+    
+    return 1;
+}
 
 
 static int close_lua( lua_State *L )
@@ -187,6 +207,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { "create", create_lua },
         { "open", open_lua },
         { "close", close_lua },
+        { "touch", touch_lua },
         { "path", path_lua },
         { NULL, NULL }
     };
