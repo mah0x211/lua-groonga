@@ -26,42 +26,9 @@
  *
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <lua.h>
-#include <lauxlib.h>
-#include <groonga/groonga.h>
+#include "lgroonga.h"
 
-// helper macros
-#define pdealloc(p)     free((void*)(p))
-
-#define lstate_setmetatable(L,tname) do { \
-    luaL_getmetatable( L, tname ); \
-    lua_setmetatable( L, -2 ); \
-}while(0)
-
-#define lstate_ref(L) \
-    (luaL_ref( L, LUA_REGISTRYINDEX ))
-
-#define lstate_unref(L,ref) \
-    luaL_unref( L, LUA_REGISTRYINDEX, (ref) )
-
-#define lstate_fn2tbl(L,k,v) do{ \
-    lua_pushstring(L,k); \
-    lua_pushcfunction(L,v); \
-    lua_rawset(L,-3); \
-}while(0)
-
-
-#define MODULE_MT   "groonga"
-
-
-typedef struct {
-    grn_ctx ctx;
-} lgroonga_t;
-
-
+#define MODULE_MT   GROONGA_MT
 
 // MARK: database API
 
@@ -168,8 +135,7 @@ static int gc_lua( lua_State *L )
 
 static int tostring_lua( lua_State *L )
 {
-    lua_pushfstring( L, "<" MODULE_MT " %p>", lua_touserdata( L, 1 ) );
-    return 1;
+    return lgroonga_tostring( L, MODULE_MT );
 }
 
 
@@ -194,7 +160,7 @@ static int new_lua( lua_State *L )
 
 LUALIB_API int luaopen_groonga( lua_State *L )
 {
-    struct luaL_Reg mmethod[] = {
+    struct luaL_Reg mmethods[] = {
         { "__gc", gc_lua },
         { "__tostring", tostring_lua },
         { NULL, NULL }
@@ -207,7 +173,10 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { "path", path_lua },
         { NULL, NULL }
     };
-    struct luaL_Reg *ptr = mmethod;
+    struct luaL_Reg funcs[] = {
+        { "new", new_lua },
+        { NULL, NULL }
+    };
     
     // failed to initialize groonga global variables
     // ???: should i construct error message?
@@ -216,26 +185,9 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     }
     
     // create metatable
-    luaL_newmetatable( L, MODULE_MT );
-    // add metamethods
-    while( ptr->name ){
-        lstate_fn2tbl( L, ptr->name, ptr->func );
-        ptr++;
-    }
-    // add methods
-    ptr = methods;
-    lua_pushstring( L, "__index" );
-    lua_newtable( L );
-    while( ptr->name ){
-        lstate_fn2tbl( L, ptr->name, ptr->func );
-        ptr++;
-    }
-    lua_rawset( L, -3 );
-    lua_pop( L, 1 );
-    
-    // add allocator
-    lua_newtable( L );
-    lstate_fn2tbl( L, "new", new_lua );
+    lgroonga_register_mt( L, MODULE_MT, mmethods, methods );
+    // create module table
+    lgroonga_register_funcs( L, funcs );
 
     return 1;
 }
