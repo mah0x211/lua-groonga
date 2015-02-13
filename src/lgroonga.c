@@ -26,16 +26,16 @@
  *
  */
 
-
-#include <signal.h>
+#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <stdint.h>
 #include <lua.h>
 #include <lauxlib.h>
 #include <groonga/groonga.h>
 
 // helper macros
+#define pdealloc(p)     free((void*)(p))
+
 #define lstate_setmetatable(L,tname) do { \
     luaL_getmetatable( L, tname ); \
     lua_setmetatable( L, -2 ); \
@@ -59,13 +59,27 @@
 
 typedef struct {
     grn_ctx ctx;
-    const char *path;
+    char *path;
+    grn_obj *db;
 } lgroonga_t;
+
+
+static int path_lua( lua_State *L )
+{
+    lgroonga_t *g = luaL_checkudata( L, 1, MODULE_MT );
+
+    lua_pushstring( L, g->path );
+    return 1;
+}
 
 
 static int gc_lua( lua_State *L )
 {
-    //lgroonga_t *g = (lgroonga_t*)lua_touserdata( L, 1 );
+    lgroonga_t *g = (lgroonga_t*)lua_touserdata( L, 1 );
+    
+    grn_ctx_fin( &g->ctx );
+    pdealloc( g->path );
+    
     return 0;
 }
 
@@ -79,18 +93,28 @@ static int tostring_lua( lua_State *L )
 
 static int new_lua( lua_State *L )
 {
-    lgroonga_t *g = lua_newuserdata( L, sizeof( lgroonga_t ) );
+    const char *path = luaL_checkstring( L, 1 );
+    lgroonga_t *g = NULL;
     
-    if( g ){
-        lstate_setmetatable( L, MODULE_MT );
-        return 1;
+    if( !( g = lua_newuserdata( L, sizeof( lgroonga_t ) ) ) ){
+        lua_pushnil( L );
+        lua_pushstring( L, strerror( errno ) );
+    }
+    else
+    {
+        grn_ctx_init( &g->ctx, 0 );
+        // create database and resolve path
+        if( ( g->db = grn_db_create( &g->ctx, path, NULL ) ) &&
+            ( g->path = realpath( path, NULL ) ) ){
+            lstate_setmetatable( L, MODULE_MT );
+            return 1;
+        }
+        lua_pushnil( L );
+        lua_pushstring( L, g->ctx.errbuf );
+        grn_ctx_fin( &g->ctx );
     }
     
-    // got error
-    lua_pushnil( L );
-    lua_pushstring( L, strerror( errno ) );
-    
-    return 0;
+    return 2;
 }
 
 
@@ -102,9 +126,16 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { NULL, NULL }
     };
     struct luaL_Reg methods[] = {
+        { "path", path_lua },
         { NULL, NULL }
     };
     struct luaL_Reg *ptr = mmethod;
+    
+    // failed to initialize groonga global variables
+    // ???: should i construct error message?
+    if( grn_init() != GRN_SUCCESS ){
+        return lua_error( L );
+    }
     
     // create metatable
     luaL_newmetatable( L, MODULE_MT );
@@ -127,7 +158,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     // add allocator
     lua_newtable( L );
     lstate_fn2tbl( L, "new", new_lua );
-    
+
     return 1;
 }
 
