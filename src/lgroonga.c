@@ -188,6 +188,48 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     lgroonga_register_mt( L, MODULE_MT, mmethods, methods );
     // create module table
     lgroonga_register_fn( L, funcs );
+    // constants
+    lstate_int2tbl( L, "PERSISTENT", GRN_OBJ_PERSISTENT );
+    // table flags
+    lstate_int2tbl( L, "TABLE_NO_KEY", GRN_OBJ_TABLE_NO_KEY );
+    lstate_int2tbl( L, "TABLE_HASH_KEY", GRN_OBJ_TABLE_HASH_KEY );
+    lstate_int2tbl( L, "TABLE_PAT_KEY", GRN_OBJ_TABLE_PAT_KEY );
+    lstate_int2tbl( L, "TABLE_DAT_KEY", GRN_OBJ_TABLE_DAT_KEY );
+    // key flags
+    lstate_int2tbl( L, "KEY_NORMALIZE", GRN_OBJ_KEY_NORMALIZE );
+    lstate_int2tbl( L, "KEY_WITH_SIS", GRN_OBJ_KEY_WITH_SIS );
+    // column flags
+    lstate_int2tbl( L, "COLUMN_SCALAR", GRN_OBJ_COLUMN_SCALAR );
+    lstate_int2tbl( L, "COLUMN_VECTOR", GRN_OBJ_COLUMN_VECTOR );
+    lstate_int2tbl( L, "COLUMN_INDEX", GRN_OBJ_COLUMN_INDEX );
+    // compress flags
+    lstate_int2tbl( L, "COMPRESS_NONE", GRN_OBJ_COMPRESS_NONE );
+    lstate_int2tbl( L, "COMPRESS_ZLIB", GRN_OBJ_COMPRESS_ZLIB );
+    lstate_int2tbl( L, "COMPRESS_LZ4", GRN_OBJ_COMPRESS_LZ4 );
+    // with flags
+    lstate_int2tbl( L, "WITH_SECTION", GRN_OBJ_WITH_SECTION );
+    lstate_int2tbl( L, "WITH_WEIGHT", GRN_OBJ_WITH_WEIGHT );
+    lstate_int2tbl( L, "WITH_POSITION", GRN_OBJ_WITH_POSITION );
+    // data type
+    lstate_int2tbl( L, "T_VOID", GRN_DB_VOID );
+    lstate_int2tbl( L, "T_DB", GRN_DB_DB );
+    lstate_int2tbl( L, "T_OBJECT", GRN_DB_OBJECT );
+    lstate_int2tbl( L, "T_BOOL", GRN_DB_BOOL );
+    lstate_int2tbl( L, "T_INT8", GRN_DB_INT8 );
+    lstate_int2tbl( L, "T_UINT8", GRN_DB_UINT8 );
+    lstate_int2tbl( L, "T_INT16", GRN_DB_INT16 );
+    lstate_int2tbl( L, "T_UINT16", GRN_DB_UINT16 );
+    lstate_int2tbl( L, "T_INT32", GRN_DB_INT32 );
+    lstate_int2tbl( L, "T_UINT32", GRN_DB_UINT32 );
+    lstate_int2tbl( L, "T_INT64", GRN_DB_INT64 );
+    lstate_int2tbl( L, "T_UINT64", GRN_DB_UINT64 );
+    lstate_int2tbl( L, "T_FLOAT", GRN_DB_FLOAT );
+    lstate_int2tbl( L, "T_TIME", GRN_DB_TIME );
+    lstate_int2tbl( L, "T_SHORT_TEXT", GRN_DB_SHORT_TEXT );
+    lstate_int2tbl( L, "T_TEXT", GRN_DB_TEXT );
+    lstate_int2tbl( L, "T_LONG_TEXT", GRN_DB_LONG_TEXT );
+    lstate_int2tbl( L, "T_TOKYO_GEO", GRN_DB_TOKYO_GEO_POINT );
+    lstate_int2tbl( L, "T_WGS84_GEO", GRN_DB_WGS84_GEO_POINT );
 
     return 1;
 }
