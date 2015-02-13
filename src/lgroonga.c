@@ -77,6 +77,9 @@ static int gc_lua( lua_State *L )
 {
     lgroonga_t *g = (lgroonga_t*)lua_touserdata( L, 1 );
     
+    // close db
+    grn_obj_close( &g->ctx, g->db );
+    // free
     grn_ctx_fin( &g->ctx );
     pdealloc( g->path );
     
