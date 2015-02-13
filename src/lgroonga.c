@@ -125,12 +125,10 @@ static int open_lua( lua_State *L )
     // close current db
     close_groonga( g );
     if( grn_db_open( &g->ctx, path ) ){
-        lua_pushboolean( L, 1 );
-        return 1;
+        return 0;
     }
     
     // got error
-    lua_pushboolean( L, 0 );
     lua_pushstring( L, g->ctx.errbuf );
     
     return 1;
@@ -145,12 +143,10 @@ static int create_lua( lua_State *L )
     // close current db
     close_groonga( g );
     if( grn_db_create( &g->ctx, path, NULL ) ){
-        lua_pushboolean( L, 1 );
-        return 1;
+        return 0;
     }
     
     // got error
-    lua_pushboolean( L, 0 );
     lua_pushstring( L, g->ctx.errbuf );
     
     return 1;
