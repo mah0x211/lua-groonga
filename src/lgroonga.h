@@ -77,8 +77,7 @@ LUALIB_API int luaopen_groonga( lua_State *L );
 
 // metanames
 // module definition register
-static inline int lgroonga_register_funcs( lua_State *L, 
-                                          struct luaL_Reg method[] )
+static inline int lgroonga_register_fn( lua_State *L, struct luaL_Reg method[] )
 {
     struct luaL_Reg *ptr = method;
     
@@ -111,7 +110,7 @@ static inline int lgroonga_register_mt( lua_State *L, const char *tname,
         // methods
         if( method ){
             lua_pushstring( L, "__index" );
-            lgroonga_register_funcs( L, method );
+            lgroonga_register_fn( L, method );
             lua_rawset( L, -3 );
         }
         lua_pop( L, 1 );

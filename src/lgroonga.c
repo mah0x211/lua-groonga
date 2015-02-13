@@ -187,7 +187,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     // create metatable
     lgroonga_register_mt( L, MODULE_MT, mmethods, methods );
     // create module table
-    lgroonga_register_funcs( L, funcs );
+    lgroonga_register_fn( L, funcs );
 
     return 1;
 }
