@@ -59,7 +59,7 @@
 
 typedef struct {
     grn_ctx ctx;
-    char *path;
+    const char *path;
     grn_obj *db;
 } lgroonga_t;
 
@@ -91,30 +91,45 @@ static int tostring_lua( lua_State *L )
 }
 
 
+// create or open database
+#define create_groonga( g ) grn_db_create( &(g)->ctx, (g)->path, NULL )
+#define open_groonga( g )   grn_db_open( &(g)->ctx, (g)->path )
+
+// allocate lua object
+#define alloc_groonga( L, fn ) do { \
+    lgroonga_t *g = NULL; \
+    /* alloc userdata */ \
+    if( !( g = lua_newuserdata( L, sizeof( lgroonga_t ) ) ) ){ \
+        lua_pushnil( L ); \
+        lua_pushstring( L, strerror( errno ) ); \
+        return 2; \
+    } \
+    /* init context and open or create database and resolve path */ \
+    g->path = luaL_checkstring( L, 1 ); \
+    grn_ctx_init( &g->ctx, 0 ); \
+    if( !( g->db = fn( g ) ) || \
+        !( g->path = realpath( g->path, NULL ) ) ){ \
+        /* got error */ \
+        lua_pushnil( L ); \
+        lua_pushstring( L, g->ctx.errbuf ); \
+        grn_ctx_fin( &g->ctx ); \
+        return 2; \
+    } \
+    lstate_setmetatable( L, MODULE_MT ); \
+}while(0)
+
+
+static int open_lua( lua_State *L )
+{
+    alloc_groonga( L, open_groonga );
+    return 1;
+}
+
+
 static int new_lua( lua_State *L )
 {
-    const char *path = luaL_checkstring( L, 1 );
-    lgroonga_t *g = NULL;
-    
-    if( !( g = lua_newuserdata( L, sizeof( lgroonga_t ) ) ) ){
-        lua_pushnil( L );
-        lua_pushstring( L, strerror( errno ) );
-    }
-    else
-    {
-        grn_ctx_init( &g->ctx, 0 );
-        // create database and resolve path
-        if( ( g->db = grn_db_create( &g->ctx, path, NULL ) ) &&
-            ( g->path = realpath( path, NULL ) ) ){
-            lstate_setmetatable( L, MODULE_MT );
-            return 1;
-        }
-        lua_pushnil( L );
-        lua_pushstring( L, g->ctx.errbuf );
-        grn_ctx_fin( &g->ctx );
-    }
-    
-    return 2;
+    alloc_groonga( L, create_groonga );
+    return 1;
 }
 
 
@@ -158,6 +173,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     // add allocator
     lua_newtable( L );
     lstate_fn2tbl( L, "new", new_lua );
+    lstate_fn2tbl( L, "open", open_lua );
 
     return 1;
 }
