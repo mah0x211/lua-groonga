@@ -59,7 +59,6 @@ static int table_lua( lua_State *L )
             // nomem error
             lua_pushnil( L );
             lua_pushstring( L, strerror( errno ) );
-            return 2;
             rv = 2;
         }
         grn_obj_unlink( ctx, obj );
