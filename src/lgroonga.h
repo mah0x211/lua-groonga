@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 #include <lua.h>
 #include <lauxlib.h>
 #include <groonga/groonga.h>
@@ -79,11 +80,12 @@
 typedef struct {
     grn_ctx ctx;
     uint8_t removed;
+    uint64_t retain;
 } lgrn_t;
 
 
 typedef struct {
-    grn_ctx *ctx;
+    lgrn_t *g;
     grn_obj *tbl;
     int ref_g;
 } lgrn_tbl_t;
@@ -147,6 +149,43 @@ static inline int lgrn_register_mt( lua_State *L, const char *tname,
     
     return 0;
 }
+
+
+
+// MARK: database
+
+static inline lgrn_t *lgrn_retain( lgrn_t *g )
+{
+    g->retain++;
+    return g;
+}
+
+
+static inline uint64_t lgrn_release( lgrn_t *g )
+{
+    if( g->retain ){
+        g->retain--;
+    }
+    
+    return g->retain;
+}
+
+
+static inline grn_ctx *lgrn_get_ctx( lgrn_t *g )
+{
+    return &g->ctx;
+}
+
+
+static inline grn_obj *lgrn_get_db( lgrn_t *g )
+{
+    if( !g->removed ){
+        return grn_ctx_db( &g->ctx );
+    }
+    
+    return NULL;
+}
+
 
 
 // MARK: iterator

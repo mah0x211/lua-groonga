@@ -36,7 +36,7 @@ static int name_lua( lua_State *L )
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
     lgrn_tblname_t tname;
     
-    if( lgrn_get_tblname( &tname, t->ctx, t->tbl ) ){
+    if( lgrn_get_tblname( &tname, lgrn_get_ctx( t->g ), t->tbl ) ){
         lua_pushlstring( L, tname.name, (size_t)tname.len );
     }
     // temporary table
@@ -51,7 +51,7 @@ static int name_lua( lua_State *L )
 static int path_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
-    const char *path = grn_obj_path( t->ctx, t->tbl );
+    const char *path = grn_obj_path( lgrn_get_ctx( t->g ), t->tbl );
     
     if( path ){
         lua_pushstring( L, path );
@@ -90,10 +90,11 @@ static int type_lua( lua_State *L )
 static int domain_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
-    grn_obj *obj = grn_ctx_at( t->ctx, t->tbl->header.domain );
+    grn_ctx *ctx = lgrn_get_ctx( t->g );
+    grn_obj *obj = grn_ctx_at( ctx, t->tbl->header.domain );
     lgrn_tblname_t tname;
     
-    if( obj && lgrn_get_tblname( &tname, t->ctx, obj ) ){
+    if( obj && lgrn_get_tblname( &tname, ctx, obj ) ){
         lua_pushlstring( L, tname.name, (size_t)tname.len );
     }
     else {
@@ -122,12 +123,14 @@ static int tostring_lua( lua_State *L )
 
 static int gc_lua( lua_State *L )
 {
-    lgrn_tbl_t *s = lua_touserdata( L, 1 );
+    lgrn_tbl_t *t = lua_touserdata( L, 1 );
     
-    if( s->tbl ){
-        grn_obj_unlink( s->ctx, s->tbl );
+    if( t->tbl ){
+        grn_obj_unlink( lgrn_get_ctx( t->g ), t->tbl );
     }
-    lstate_unref( L, s->ref_g );
+    // release reference
+    lstate_unref( L, t->ref_g );
+    lgrn_release( t->g );
     
     return 0;
 }

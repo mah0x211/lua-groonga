@@ -30,86 +30,104 @@
 
 #define MODULE_MT   GROONGA_MT
 
+#define LGRN_ENODB  "database has been removed"
+
 // MARK: table API
 static int table_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
-    grn_ctx *ctx = &g->ctx;
-    size_t len = 0;
-    const char *name = luaL_checklstring( L, 2, &len );
-    grn_obj *obj = NULL;
-    lgrn_tbl_t *t = NULL;
-    int rv = 1;
     
-    if( len < GRN_TABLE_MAX_KEY_SIZE && 
-        ( obj = grn_ctx_get( &g->ctx, name, len ) ) )
-    {
-        if( lgrn_obj_istbl( obj ) )
-        {
-            // create table metatable
-            if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
-                lstate_setmetatable( L, GROONGA_TABLE_MT );
-                // retain references
-                t->tbl = obj;
-                t->ctx = ctx;
-                t->ref_g = lstate_refat( L, 1 );
-                return 1;
-            }
-            
-            // nomem error
-            lua_pushnil( L );
-            lua_pushstring( L, strerror( errno ) );
-            rv = 2;
-        }
-        grn_obj_unlink( ctx, obj );
-    }
-    
-    // not found
-    if( rv == 1 ){
+    if( !lgrn_get_db( g ) ){
         lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENODB );
+        return 2;
     }
-    
-    return rv;
+    else
+    {
+        int rv = 1;
+        grn_ctx *ctx = lgrn_get_ctx( g );
+        size_t len = 0;
+        const char *name = luaL_checklstring( L, 2, &len );
+        grn_obj *obj = NULL;
+        lgrn_tbl_t *t = NULL;
+        
+        if( len < GRN_TABLE_MAX_KEY_SIZE && 
+            ( obj = grn_ctx_get( ctx, name, len ) ) )
+        {
+            if( lgrn_obj_istbl( obj ) )
+            {
+                // create table metatable
+                if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
+                    lstate_setmetatable( L, GROONGA_TABLE_MT );
+                    // retain references
+                    t->ref_g = lstate_refat( L, 1 );
+                    t->g = lgrn_retain( g );
+                    t->tbl = obj;
+                    return 1;
+                }
+                
+                // nomem error
+                lua_pushnil( L );
+                lua_pushstring( L, strerror( errno ) );
+                rv = 2;
+            }
+            grn_obj_unlink( ctx, obj );
+        }
+        
+        // not found
+        if( rv == 1 ){
+            lua_pushnil( L );
+        }
+        
+        return rv;
+    }
 }
 
 
 static int tables_next_lua( lua_State *L )
 {
-    lgrn_iter_t *it = (lgrn_iter_t*)lua_touserdata( L, lua_upvalueindex( 1 ) );
-    int ref = lua_tointeger( L, lua_upvalueindex( 2 ) );
-    lgrn_tbl_t *t = NULL;
-    grn_obj *tbl = NULL;
-    lgrn_tblname_t tname;
+    lgrn_t *g = luaL_checkudata( L, lua_upvalueindex( 1 ), MODULE_MT );
+    lgrn_iter_t *it = (lgrn_iter_t*)lua_touserdata( L, lua_upvalueindex( 2 ) );
+    int ref = lua_tointeger( L, lua_upvalueindex( 3 ) );
     
-    while( lgrn_tbl_iter_next( it, &tbl ) == GRN_SUCCESS )
+    if( lgrn_get_db( g ) )
     {
-        // create table metatable
-        t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) );
-        if( t )
+        lgrn_tbl_t *t = NULL;
+        grn_obj *tbl = NULL;
+        lgrn_tblname_t tname;
+        
+        while( lgrn_tbl_iter_next( it, &tbl ) == GRN_SUCCESS )
         {
-            lstate_setmetatable( L, GROONGA_TABLE_MT );
-            // retain references
-            t->tbl = tbl;
-            t->ctx = it->ctx;
-            lstate_pushref( L, ref );
-            t->ref_g = lstate_ref( L );
-            // get table name
-            if( lgrn_get_tblname( &tname, it->ctx, tbl ) ){
-                lua_pushlstring( L, tname.name, (size_t)tname.len );
+            // create table metatable
+            t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) );
+            if( t )
+            {
+                lstate_setmetatable( L, GROONGA_TABLE_MT );
+                // retain references
+                lstate_pushref( L, ref );
+                t->ref_g = lstate_ref( L );
+                t->g = lgrn_retain( g );
+                t->tbl = tbl;
+                
+                // get table name
+                if( lgrn_get_tblname( &tname, it->ctx, tbl ) ){
+                    lua_pushlstring( L, tname.name, (size_t)tname.len );
+                }
+                // temporary table has no name
+                else {
+                    lua_pushnil( L );
+                }
             }
-            // temporary table has no name
+            // nomem error
             else {
+                lstate_unref( L, ref );
                 lua_pushnil( L );
+                lua_pushstring( L, strerror( errno ) );
             }
+            return 2;
         }
-        // nomem error
-        else {
-            lstate_unref( L, ref );
-            lua_pushnil( L );
-            lua_pushstring( L, strerror( errno ) );
-        }
-        return 2;
     }
+    
     lgrn_iter_dispose( it );
     lstate_unref( L, ref );
     
@@ -120,15 +138,14 @@ static int tables_next_lua( lua_State *L )
 static int tables_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
-    grn_ctx *ctx = &g->ctx;
     lgrn_iter_t *it = lua_newuserdata( L, sizeof( lgrn_iter_t ) );
     
-    if( !it || lgrn_tbl_iter_init( it, ctx ) != GRN_SUCCESS ){
+    if( !it || lgrn_tbl_iter_init( it, lgrn_get_ctx( g ) ) != GRN_SUCCESS ){
         lua_pushnil( L );
     }
     else {
         lua_pushinteger( L, lstate_refat( L, 1 ) );
-        lua_pushcclosure( L, tables_next_lua, 2 );
+        lua_pushcclosure( L, tables_next_lua, 3 );
     }
     
     return 1;
@@ -136,26 +153,19 @@ static int tables_lua( lua_State *L )
 
 
 // MARK: database API
-// close db
-#define close_groonga( g ) do { \
-    grn_obj *db = grn_ctx_db( &(g)->ctx ); \
-    if( db ){ \
-        grn_obj_unlink( &(g)->ctx, db ); \
-    } \
-}while(0)
-
 
 static int path_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
-    grn_obj *db = grn_ctx_db( &g->ctx );
+    grn_obj *db = lgrn_get_db( g );
     
-    if( db ){
-        lua_pushstring( L, grn_obj_path( &g->ctx, db ) );
-    }
-    else {
+    if( !db ){
         lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENODB );
+        return 2;
     }
+    
+    lua_pushstring( L, grn_obj_path( lgrn_get_ctx( g ), db ) );
     
     return 1;
 }
@@ -164,15 +174,16 @@ static int path_lua( lua_State *L )
 static int touch_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
-    grn_obj *db = grn_ctx_db( &g->ctx );
+    grn_obj *db = lgrn_get_db( g );
     
-    if( db ){
-        grn_db_touch( &g->ctx, db );
-        lua_pushboolean( L, 1 );
-    }
-    else {
+    if( !db ){
         lua_pushboolean( L, 0 );
+        lua_pushstring( L, LGRN_ENODB );
+        return 2;
     }
+    
+    grn_db_touch( lgrn_get_ctx( g ), db );
+    lua_pushboolean( L, 1 );
     
     return 1;
 }
@@ -181,12 +192,12 @@ static int touch_lua( lua_State *L )
 static int remove_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
-    grn_obj *db = grn_ctx_db( &g->ctx );
+    grn_obj *db = lgrn_get_db( g );
     
     g->removed = 1;
-    // should remove immediately
-    if( db && lua_type( L, 2 ) == LUA_TBOOLEAN && lua_toboolean( L, 2 ) ){
-        grn_obj_remove( &g->ctx, db );
+    // can be remove immediately if reference counter is 0
+    if( db && !g->retain ){
+        grn_obj_remove( lgrn_get_ctx( g ), db );
     }
     
     return 0;
@@ -198,12 +209,18 @@ static int gc_lua( lua_State *L )
     lgrn_t *g = (lgrn_t*)lua_touserdata( L, 1 );
     grn_obj *db = grn_ctx_db( &g->ctx );
     
-    // remove db
-    if( db && g->removed ){
-        grn_obj_remove( &g->ctx, db );
+    if( db )
+    {
+        // remove db
+        if( g->removed ){
+            grn_obj_remove( &g->ctx, db );
+        }
+        // close db
+        else {
+            grn_obj_unlink( &g->ctx, db );
+        }
     }
-    // close db
-    close_groonga( g );
+    
     // free
     grn_ctx_fin( &g->ctx );
     
@@ -233,6 +250,7 @@ static int new_lua( lua_State *L )
               grn_db_create( &g->ctx, path, NULL ) ) ){
             lstate_setmetatable( L, MODULE_MT );
             g->removed = 0;
+            g->retain = 0;
             return 1;
         }
         // got error
