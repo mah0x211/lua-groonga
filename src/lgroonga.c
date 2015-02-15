@@ -209,6 +209,39 @@ static int tostring_lua( lua_State *L )
 }
 
 
+static int remove_db_lua( lua_State *L )
+{
+    size_t len = 0;
+    const char *path = luaL_checklstring( L, 1, &len );
+    grn_obj *db = NULL;
+    grn_ctx ctx;
+    int rv = 2;
+    
+    if( !len ){
+        lua_pushboolean( L, 0 );
+        return 1;
+    }
+    
+    grn_ctx_init( &ctx, 0 );
+    if( !( db = grn_db_open( &ctx, path ) ) ){
+        lua_pushboolean( L, 0 );
+        lua_pushstring( L, ctx.errbuf );
+    }
+    else if( grn_obj_remove( &ctx, db ) != GRN_SUCCESS ){
+        lua_pushboolean( L, 0 );
+        lua_pushstring( L, ctx.errbuf );
+        grn_obj_unlink( &ctx, db );
+    }
+    else {
+        lua_pushboolean( L, 1 );
+        rv = 1;
+    }
+    grn_ctx_fin( &ctx );
+    
+    return rv;
+}
+
+
 static int new_lua( lua_State *L )
 {
     lgrn_t *g = NULL;
@@ -258,6 +291,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     };
     struct luaL_Reg funcs[] = {
         { "new", new_lua },
+        { "removeDb", remove_db_lua },
         { NULL, NULL }
     };
     
