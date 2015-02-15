@@ -78,6 +78,7 @@
 // MARK: structures
 typedef struct {
     grn_ctx ctx;
+    uint8_t removed;
 } lgrn_t;
 
 

@@ -188,10 +188,30 @@ static int close_lua( lua_State *L )
 }
 
 
+static int remove_lua( lua_State *L )
+{
+    lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    grn_obj *db = grn_ctx_db( &g->ctx );
+    
+    g->removed = 1;
+    // should remove immediately
+    if( db && lua_type( L, 2 ) == LUA_TBOOLEAN && lua_toboolean( L, 2 ) ){
+        grn_obj_remove( &g->ctx, db );
+    }
+    
+    return 0;
+}
+
+
 static int gc_lua( lua_State *L )
 {
     lgrn_t *g = (lgrn_t*)lua_touserdata( L, 1 );
+    grn_obj *db = grn_ctx_db( &g->ctx );
     
+    // remove db
+    if( db && g->removed ){
+        grn_obj_remove( &g->ctx, db );
+    }
     // close db
     close_groonga( g );
     // free
@@ -204,39 +224,6 @@ static int gc_lua( lua_State *L )
 static int tostring_lua( lua_State *L )
 {
     return lgrn_tostring( L, MODULE_MT );
-}
-
-
-static int remove_db_lua( lua_State *L )
-{
-    size_t len = 0;
-    const char *path = luaL_checklstring( L, 1, &len );
-    grn_obj *db = NULL;
-    grn_ctx ctx;
-    int rv = 2;
-    
-    if( !len ){
-        lua_pushboolean( L, 0 );
-        return 1;
-    }
-    
-    grn_ctx_init( &ctx, 0 );
-    if( !( db = grn_db_open( &ctx, path ) ) ){
-        lua_pushboolean( L, 0 );
-        lua_pushstring( L, ctx.errbuf );
-    }
-    else if( grn_obj_remove( &ctx, db ) != GRN_SUCCESS ){
-        lua_pushboolean( L, 0 );
-        lua_pushstring( L, ctx.errbuf );
-        grn_obj_unlink( &ctx, db );
-    }
-    else {
-        lua_pushboolean( L, 1 );
-        rv = 1;
-    }
-    grn_ctx_fin( &ctx );
-    
-    return rv;
 }
 
 
@@ -255,6 +242,7 @@ static int new_lua( lua_State *L )
             ( lua_type( L, 2 ) == LUA_TBOOLEAN && lua_toboolean( L, 2 ) && 
               grn_db_create( &g->ctx, path, NULL ) ) ){
             lstate_setmetatable( L, MODULE_MT );
+            g->removed = 0;
             return 1;
         }
         // got error
@@ -303,6 +291,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { NULL, NULL }
     };
     struct luaL_Reg methods[] = {
+        { "remove", remove_lua },
         { "close", close_lua },
         { "touch", touch_lua },
         { "path", path_lua },
@@ -314,7 +303,6 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { "version", version_lua },
         { "encoding", encoding_lua },
         { "new", new_lua },
-        { "removeDb", remove_db_lua },
         { NULL, NULL }
     };
     
