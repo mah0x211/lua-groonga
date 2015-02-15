@@ -73,9 +73,15 @@ typedef struct {
 
 
 // prototypes
+typedef struct {
+    int len;
+    char name[GRN_TABLE_MAX_KEY_SIZE];
+} lgrn_tblname_t;
+
 LUALIB_API int luaopen_groonga( lua_State *L );
 
 
+// MARK: helper API
 // common metamethods
 #define lgroonga_tostring(L,tname) ({ \
     lua_pushfstring( L, tname ": %p", lua_touserdata( L, 1 ) ); \
@@ -129,5 +135,12 @@ static inline int lgroonga_register_mt( lua_State *L, const char *tname,
     return 0;
 }
 
+
+static inline int lgroonga_get_tblname( lgrn_tblname_t *tname, grn_ctx *ctx, 
+                                        grn_obj *tbl )
+{
+    tname->len = grn_obj_name( ctx, tbl, tname->name, GRN_TABLE_MAX_KEY_SIZE );
+    return tname->len;
+}
 
 #endif
