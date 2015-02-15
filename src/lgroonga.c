@@ -274,6 +274,21 @@ static int new_lua( lua_State *L )
 }
 
 
+static int encoding_lua( lua_State *L )
+{
+    size_t len = 0;
+    const char *enc = luaL_optlstring( L, 1, NULL, &len );
+    
+    // set default encoding
+    if( len ){
+        grn_set_default_encoding( grn_encoding_parse( enc ) );
+    }
+    
+    lua_pushstring( L, grn_encoding_to_string( grn_get_default_encoding() ) );
+    
+    return 1;
+}
+
 static int version_lua( lua_State *L )
 {
     lua_pushstring( L, grn_get_version() );
@@ -298,6 +313,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     };
     struct luaL_Reg funcs[] = {
         { "version", version_lua },
+        { "encoding", encoding_lua },
         { "new", new_lua },
         { "removeDb", remove_db_lua },
         { NULL, NULL }
