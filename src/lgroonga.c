@@ -274,6 +274,13 @@ static int new_lua( lua_State *L )
 }
 
 
+static int version_lua( lua_State *L )
+{
+    lua_pushstring( L, grn_get_version() );
+    return 1;
+}
+
+
 LUALIB_API int luaopen_groonga( lua_State *L )
 {
     struct luaL_Reg mmethods[] = {
@@ -290,6 +297,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { NULL, NULL }
     };
     struct luaL_Reg funcs[] = {
+        { "version", version_lua },
         { "new", new_lua },
         { "removeDb", remove_db_lua },
         { NULL, NULL }
