@@ -69,7 +69,7 @@
 
 typedef struct {
     grn_ctx ctx;
-} lgroonga_t;
+} lgrn_t;
 
 
 // prototypes

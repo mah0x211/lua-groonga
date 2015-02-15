@@ -43,7 +43,7 @@
 
 static int path_lua( lua_State *L )
 {
-    lgroonga_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
     grn_obj *db = grn_ctx_db( &g->ctx );
     
     if( db ){
@@ -59,7 +59,7 @@ static int path_lua( lua_State *L )
 
 static int touch_lua( lua_State *L )
 {
-    lgroonga_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
     grn_obj *db = grn_ctx_db( &g->ctx );
     
     if( db ){
@@ -76,7 +76,7 @@ static int touch_lua( lua_State *L )
 
 static int close_lua( lua_State *L )
 {
-    lgroonga_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
     
     close_groonga( g );
     
@@ -86,7 +86,7 @@ static int close_lua( lua_State *L )
 
 static int open_lua( lua_State *L )
 {
-    lgroonga_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
     const char *path = luaL_checkstring( L, 2 );
     
     // close current db
@@ -104,7 +104,7 @@ static int open_lua( lua_State *L )
 
 static int create_lua( lua_State *L )
 {
-    lgroonga_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
     const char *path = luaL_checkstring( L, 2 );
     
     // close current db
@@ -122,7 +122,7 @@ static int create_lua( lua_State *L )
 
 static int gc_lua( lua_State *L )
 {
-    lgroonga_t *g = (lgroonga_t*)lua_touserdata( L, 1 );
+    lgrn_t *g = (lgrn_t*)lua_touserdata( L, 1 );
     
     // close db
     close_groonga( g );
@@ -141,10 +141,10 @@ static int tostring_lua( lua_State *L )
 
 static int new_lua( lua_State *L )
 {
-    lgroonga_t *g = NULL;
+    lgrn_t *g = NULL;
     
     // alloc context
-    if( ( g = lua_newuserdata( L, sizeof( lgroonga_t ) ) ) ){
+    if( ( g = lua_newuserdata( L, sizeof( lgrn_t ) ) ) ){
         grn_ctx_init( &g->ctx, 0 );
         lstate_setmetatable( L, MODULE_MT );
         return 1;
