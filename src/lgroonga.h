@@ -65,20 +65,35 @@
     lua_rawset(L,-3); \
 }while(0)
 
-#define GROONGA_MT   "groonga"
 
+// MARK: constants
+// metatable names
+#define GROONGA_MT          "groonga"
+#define GROONGA_TABLE_MT    "groonga.table"
+
+
+// MARK: structures
 typedef struct {
     grn_ctx ctx;
 } lgrn_t;
 
 
-// prototypes
+typedef struct {
+    grn_ctx *ctx;
+    grn_obj *tbl;
+    int ref_g;
+} lgrn_tbl_t;
+
+
 typedef struct {
     int len;
     char name[GRN_TABLE_MAX_KEY_SIZE];
 } lgrn_tblname_t;
 
+
+// MARK: prototypes
 LUALIB_API int luaopen_groonga( lua_State *L );
+LUALIB_API int luaopen_groonga_table( lua_State *L );
 
 
 // MARK: helper API

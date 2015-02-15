@@ -188,6 +188,9 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     lgroonga_register_mt( L, MODULE_MT, mmethods, methods );
     // create module table
     lgroonga_register_fn( L, funcs );
+    // register related module
+    luaopen_groonga_table( L );
+    
     // constants
     lstate_int2tbl( L, "PERSISTENT", GRN_OBJ_PERSISTENT );
     // table flags

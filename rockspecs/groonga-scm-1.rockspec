@@ -22,11 +22,12 @@ build = {
     type = "builtin",
     modules = {
         groonga = {
-            sources = { 
-                "src/lgroonga.c"
+            sources = {
+                "src/lgroonga.c",
+                "src/table.c"
             },
             libraries = { "groonga" },
-            incdirs = { 
+            incdirs = {
                 "$(GROONGA_INCDIR)"
             },
             libdirs = {
