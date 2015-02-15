@@ -30,6 +30,50 @@
 
 #define MODULE_MT   GROONGA_MT
 
+// MARK: table API
+static int table_lua( lua_State *L )
+{
+    lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    grn_ctx *ctx = &g->ctx;
+    size_t len = 0;
+    const char *name = luaL_checklstring( L, 2, &len );
+    grn_obj *obj = NULL;
+    lgrn_tbl_t *t = NULL;
+    int rv = 1;
+    
+    if( len < GRN_TABLE_MAX_KEY_SIZE && 
+        ( obj = grn_ctx_get( &g->ctx, name, len ) ) )
+    {
+        if( lgroonga_obj_istbl( obj ) )
+        {
+            // create table metatable
+            if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
+                lstate_setmetatable( L, GROONGA_TABLE_MT );
+                // retain references
+                t->tbl = obj;
+                t->ctx = ctx;
+                t->ref_g = lstate_refat( L, 1 );
+                return 1;
+            }
+            
+            // nomem error
+            lua_pushnil( L );
+            lua_pushstring( L, strerror( errno ) );
+            return 2;
+            rv = 2;
+        }
+        grn_obj_unlink( ctx, obj );
+    }
+    
+    // not found
+    if( rv == 1 ){
+        lua_pushnil( L );
+    }
+    
+    return rv;
+}
+
+
 // MARK: database API
 
 // close db
@@ -171,6 +215,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { "close", close_lua },
         { "touch", touch_lua },
         { "path", path_lua },
+        { "table", table_lua },
         { NULL, NULL }
     };
     struct luaL_Reg funcs[] = {
