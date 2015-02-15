@@ -1,8 +1,11 @@
 local groonga = require('groonga');
 local path = './db/testdb';
+local g = groonga.new( path );
 
 -- remove testdb
-groonga.removeDb( path );
+if g then
+    g:remove();
+end
 
 -- not exists
 ifNotNil( groonga.new( path ) );
@@ -14,5 +17,5 @@ ifNil( groonga.new( path ) );
 ifNil( groonga.new( nil, true ) );
 
 -- remove db
-ifNotTrue( groonga.removeDb( path ) );
+g:remove();
 
