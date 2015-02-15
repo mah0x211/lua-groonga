@@ -53,6 +53,9 @@
 #define lstate_unref(L,ref) \
     luaL_unref( L, LUA_REGISTRYINDEX, (ref) )
 
+#define lstate_pushref(L,ref) \
+    lua_rawgeti( L, LUA_REGISTRYINDEX, ref )
+
 #define lstate_fn2tbl(L,k,v) do{ \
     lua_pushstring(L,k); \
     lua_pushcfunction(L,v); \
