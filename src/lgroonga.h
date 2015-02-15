@@ -36,7 +36,7 @@
 #include <lauxlib.h>
 #include <groonga/groonga.h>
 
-// helper macros
+// MARK: helper macros
 #define pdealloc(p)     free((void*)(p))
 
 #define lstate_setmetatable(L,tname) do { \
@@ -46,6 +46,9 @@
 
 #define lstate_ref(L) \
     (luaL_ref( L, LUA_REGISTRYINDEX ))
+
+#define lstate_refat(L,idx) \
+    (lua_pushvalue(L,idx),luaL_ref( L, LUA_REGISTRYINDEX ))
 
 #define lstate_unref(L,ref) \
     luaL_unref( L, LUA_REGISTRYINDEX, (ref) )
