@@ -88,12 +88,6 @@ typedef struct {
 } lgrn_tbl_t;
 
 
-typedef struct {
-    int len;
-    char name[GRN_TABLE_MAX_KEY_SIZE];
-} lgrn_tblname_t;
-
-
 // MARK: prototypes
 LUALIB_API int luaopen_groonga( lua_State *L );
 LUALIB_API int luaopen_groonga_table( lua_State *L );
@@ -154,6 +148,43 @@ static inline int lgrn_register_mt( lua_State *L, const char *tname,
 }
 
 
+// MARK: iterator
+typedef struct {
+    grn_ctx *ctx;
+    grn_table_cursor *cur;
+} lgrn_iter_t;
+
+
+static inline grn_rc lgrn_iter_init( lgrn_iter_t *it, grn_ctx *ctx, 
+                                     grn_obj *tbl, const void *min, 
+                                     unsigned int min_size, const void *max, 
+                                     unsigned int max_size, int offset, 
+                                     int limit, int flags )
+{
+    it->cur = grn_table_cursor_open( ctx, tbl, min, min_size, max, max_size, 
+                                     offset, limit, flags );
+    if( it->cur ){
+        it->ctx = ctx;
+        return GRN_SUCCESS;
+    }
+    
+    return ctx->rc;
+}
+
+static inline grn_rc lgrn_iter_dispose( lgrn_iter_t *it )
+{
+    return grn_table_cursor_close( it->ctx, it->cur );
+}
+
+
+
+// MARK: table management
+typedef struct {
+    int len;
+    char name[GRN_TABLE_MAX_KEY_SIZE];
+} lgrn_tblname_t;
+
+
 static inline int lgrn_get_tblname( lgrn_tblname_t *tname, grn_ctx *ctx, 
                                     grn_obj *tbl )
 {
@@ -174,6 +205,37 @@ static inline int lgrn_obj_istbl( grn_obj *obj )
         default:
             return 0;
     }
+}
+
+// init table lookup iterator.
+#define lgrn_tbl_iter_init( it, ctx ) \
+    lgrn_iter_init( it, ctx, grn_ctx_db( ctx ), NULL, 0, NULL, 0, 0, -1, 0 )
+
+// lookup a next registered table of database
+static inline grn_rc lgrn_tbl_iter_next( lgrn_iter_t *it, grn_obj **tbl )
+{
+    grn_ctx *ctx = it->ctx;
+    grn_table_cursor *cur = it->cur;
+    grn_obj *obj = NULL;
+    grn_id id;
+    
+    while( ( id = grn_table_cursor_next( ctx, cur ) ) != GRN_ID_NIL )
+    {
+        if( ( obj = grn_ctx_at( ctx, id ) ) )
+        {
+            // return table object
+            if( lgrn_obj_istbl( obj ) ){
+                *tbl = obj;
+                return GRN_SUCCESS;
+            }
+            grn_obj_unlink( ctx, obj );
+        }
+        else if( ctx->rc != GRN_SUCCESS ){
+            return ctx->rc;
+        }
+    }
+    
+    return GRN_END_OF_DATA;
 }
 
 

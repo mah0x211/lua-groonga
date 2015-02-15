@@ -73,62 +73,62 @@ static int table_lua( lua_State *L )
 }
 
 
+static int tables_next_lua( lua_State *L )
+{
+    lgrn_iter_t *it = (lgrn_iter_t*)lua_touserdata( L, lua_upvalueindex( 1 ) );
+    int ref = lua_tointeger( L, lua_upvalueindex( 2 ) );
+    lgrn_tbl_t *t = NULL;
+    grn_obj *tbl = NULL;
+    lgrn_tblname_t tname;
+    
+    while( lgrn_tbl_iter_next( it, &tbl ) == GRN_SUCCESS )
+    {
+        // create table metatable
+        t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) );
+        if( t )
+        {
+            lstate_setmetatable( L, GROONGA_TABLE_MT );
+            // retain references
+            t->tbl = tbl;
+            t->ctx = it->ctx;
+            lstate_pushref( L, ref );
+            t->ref_g = lstate_ref( L );
+            // get table name
+            if( lgrn_get_tblname( &tname, it->ctx, tbl ) ){
+                lua_pushlstring( L, tname.name, (size_t)tname.len );
+            }
+            // temporary table has no name
+            else {
+                lua_pushnil( L );
+            }
+        }
+        // nomem error
+        else {
+            lstate_unref( L, ref );
+            lua_pushnil( L );
+            lua_pushstring( L, strerror( errno ) );
+        }
+        return 2;
+    }
+    lgrn_iter_dispose( it );
+    lstate_unref( L, ref );
+    
+    return 0;
+}
+
+
 static int tables_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
     grn_ctx *ctx = &g->ctx;
-    grn_table_cursor *cur = grn_table_cursor_open( ctx, grn_ctx_db( ctx ), NULL,
-                                                   0, NULL, 0, 0, -1, 0 );
+    lgrn_iter_t *it = lua_newuserdata( L, sizeof( lgrn_iter_t ) );
     
-    if( cur )
-    {
-        lgrn_tbl_t *t = NULL;
-        grn_obj *obj = NULL;
-        lgrn_tblname_t tname;
-        int noname = 0;
-        grn_id id;
-        
-        lua_newtable( L );
-        while( ( id = grn_table_cursor_next( ctx, cur ) ) != GRN_ID_NIL )
-        {
-            if( ( obj = grn_ctx_at( ctx, id ) ) )
-            {
-                // check object type
-                if( lgrn_obj_istbl( obj ) )
-                {
-                    // get table name
-                    if( lgrn_get_tblname( &tname, ctx, obj ) ){
-                        lua_pushlstring( L, tname.name, (size_t)tname.len );
-                    }
-                    // temporary table has no name
-                    else {
-                        lua_pushinteger( L, ++noname );
-                    }
-                    
-                    // create table metatable
-                    t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) );
-                    // nomem error
-                    if( !t ){
-                        lua_pushnil( L );
-                        lua_pushstring( L, strerror( errno ) );
-                        return 2;
-                    }
-                    lstate_setmetatable( L, GROONGA_TABLE_MT );
-                    lua_rawset( L, -3 );
-                    // retain references
-                    t->tbl = obj;
-                    t->ctx = ctx;
-                    t->ref_g = lstate_refat( L, 1 );
-                }
-                else {
-                    grn_obj_unlink( ctx, obj );
-                }
-            }
-        }
-        grn_table_cursor_close(ctx, cur);
+    if( !it || lgrn_tbl_iter_init( it, ctx ) != GRN_SUCCESS ){
+        lua_pushnil( L );
     }
     else {
-        lua_pushnil( L );
+        lua_pushinteger( L, lstate_refat( L, 1 ) );
+        lua_pushcclosure( L, tables_next_lua, 2 );
     }
     
     return 1;
@@ -136,7 +136,6 @@ static int tables_lua( lua_State *L )
 
 
 // MARK: database API
-
 // close db
 #define close_groonga( g ) do { \
     grn_obj *db = grn_ctx_db( &(g)->ctx ); \
