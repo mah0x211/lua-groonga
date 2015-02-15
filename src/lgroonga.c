@@ -178,16 +178,6 @@ static int touch_lua( lua_State *L )
 }
 
 
-static int close_lua( lua_State *L )
-{
-    lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
-    
-    close_groonga( g );
-    
-    return 0;
-}
-
-
 static int remove_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
@@ -292,7 +282,6 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     };
     struct luaL_Reg methods[] = {
         { "remove", remove_lua },
-        { "close", close_lua },
         { "touch", touch_lua },
         { "path", path_lua },
         { "table", table_lua },
