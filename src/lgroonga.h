@@ -98,7 +98,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L );
 
 // MARK: helper API
 // common metamethods
-#define lgroonga_tostring(L,tname) ({ \
+#define lgrn_tostring(L,tname) ({ \
     lua_pushfstring( L, tname ": %p", lua_touserdata( L, 1 ) ); \
     1; \
 })
@@ -106,7 +106,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L );
 
 // metanames
 // module definition register
-static inline int lgroonga_register_fn( lua_State *L, struct luaL_Reg method[] )
+static inline int lgrn_register_fn( lua_State *L, struct luaL_Reg method[] )
 {
     struct luaL_Reg *ptr = method;
     
@@ -121,9 +121,9 @@ static inline int lgroonga_register_fn( lua_State *L, struct luaL_Reg method[] )
 }
 
 
-static inline int lgroonga_register_mt( lua_State *L, const char *tname, 
-                                        struct luaL_Reg mmethod[], 
-                                        struct luaL_Reg method[] )
+static inline int lgrn_register_mt( lua_State *L, const char *tname, 
+                                    struct luaL_Reg mmethod[], 
+                                    struct luaL_Reg method[] )
 {
     // create table __metatable
     if( luaL_newmetatable( L, tname ) )
@@ -139,7 +139,7 @@ static inline int lgroonga_register_mt( lua_State *L, const char *tname,
         // methods
         if( method ){
             lua_pushstring( L, "__index" );
-            lgroonga_register_fn( L, method );
+            lgrn_register_fn( L, method );
             lua_rawset( L, -3 );
         }
         lua_pop( L, 1 );
@@ -151,15 +151,15 @@ static inline int lgroonga_register_mt( lua_State *L, const char *tname,
 }
 
 
-static inline int lgroonga_get_tblname( lgrn_tblname_t *tname, grn_ctx *ctx, 
-                                        grn_obj *tbl )
+static inline int lgrn_get_tblname( lgrn_tblname_t *tname, grn_ctx *ctx, 
+                                    grn_obj *tbl )
 {
     tname->len = grn_obj_name( ctx, tbl, tname->name, GRN_TABLE_MAX_KEY_SIZE );
     return tname->len;
 }
 
 
-static inline int lgroonga_obj_istbl( grn_obj *obj )
+static inline int lgrn_obj_istbl( grn_obj *obj )
 {
     switch( obj->header.type ){
         case GRN_TABLE_HASH_KEY:

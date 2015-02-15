@@ -36,7 +36,7 @@ static int name_lua( lua_State *L )
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
     lgrn_tblname_t tname;
     
-    if( lgroonga_get_tblname( &tname, t->ctx, t->tbl ) ){
+    if( lgrn_get_tblname( &tname, t->ctx, t->tbl ) ){
         lua_pushlstring( L, tname.name, (size_t)tname.len );
     }
     // temporary table
@@ -93,7 +93,7 @@ static int domain_lua( lua_State *L )
     grn_obj *obj = grn_ctx_at( t->ctx, t->tbl->header.domain );
     lgrn_tblname_t tname;
     
-    if( obj && lgroonga_get_tblname( &tname, t->ctx, obj ) ){
+    if( obj && lgrn_get_tblname( &tname, t->ctx, obj ) ){
         lua_pushlstring( L, tname.name, (size_t)tname.len );
     }
     else {
@@ -116,7 +116,7 @@ static int persistent_lua( lua_State *L )
 
 static int tostring_lua( lua_State *L )
 {
-    return lgroonga_tostring( L, MODULE_MT );
+    return lgrn_tostring( L, MODULE_MT );
 }
 
 
@@ -149,7 +149,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L )
         { NULL, NULL }
     };
     
-    lgroonga_register_mt( L, MODULE_MT, mmethods, methods );
+    lgrn_register_mt( L, MODULE_MT, mmethods, methods );
     
     return 0;
 }

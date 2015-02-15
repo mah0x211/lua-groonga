@@ -44,7 +44,7 @@ static int table_lua( lua_State *L )
     if( len < GRN_TABLE_MAX_KEY_SIZE && 
         ( obj = grn_ctx_get( &g->ctx, name, len ) ) )
     {
-        if( lgroonga_obj_istbl( obj ) )
+        if( lgrn_obj_istbl( obj ) )
         {
             // create table metatable
             if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
@@ -94,10 +94,10 @@ static int tables_lua( lua_State *L )
             if( ( obj = grn_ctx_at( ctx, id ) ) )
             {
                 // check object type
-                if( lgroonga_obj_istbl( obj ) )
+                if( lgrn_obj_istbl( obj ) )
                 {
                     // get table name
-                    if( lgroonga_get_tblname( &tname, ctx, obj ) ){
+                    if( lgrn_get_tblname( &tname, ctx, obj ) ){
                         lua_pushlstring( L, tname.name, (size_t)tname.len );
                     }
                     // temporary table has no name
@@ -204,7 +204,7 @@ static int gc_lua( lua_State *L )
 
 static int tostring_lua( lua_State *L )
 {
-    return lgroonga_tostring( L, MODULE_MT );
+    return lgrn_tostring( L, MODULE_MT );
 }
 
 
@@ -288,6 +288,7 @@ static int encoding_lua( lua_State *L )
     return 1;
 }
 
+
 static int version_lua( lua_State *L )
 {
     lua_pushstring( L, grn_get_version() );
@@ -325,9 +326,9 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     }
     
     // create metatable
-    lgroonga_register_mt( L, MODULE_MT, mmethods, methods );
+    lgrn_register_mt( L, MODULE_MT, mmethods, methods );
     // create module table
-    lgroonga_register_fn( L, funcs );
+    lgrn_register_fn( L, funcs );
     // register related module
     luaopen_groonga_table( L );
     
