@@ -158,4 +158,20 @@ static inline int lgroonga_get_tblname( lgrn_tblname_t *tname, grn_ctx *ctx,
     return tname->len;
 }
 
+
+static inline int lgroonga_obj_istbl( grn_obj *obj )
+{
+    switch( obj->header.type ){
+        case GRN_TABLE_HASH_KEY:
+        case GRN_TABLE_PAT_KEY:
+        case GRN_TABLE_DAT_KEY:
+        case GRN_TABLE_NO_KEY:
+            return 1;
+        
+        default:
+            return 0;
+    }
+}
+
+
 #endif
