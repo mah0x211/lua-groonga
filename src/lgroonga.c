@@ -74,6 +74,68 @@ static int table_lua( lua_State *L )
 }
 
 
+static int tables_lua( lua_State *L )
+{
+    lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    grn_ctx *ctx = &g->ctx;
+    grn_table_cursor *cur = grn_table_cursor_open( ctx, grn_ctx_db( ctx ), NULL,
+                                                   0, NULL, 0, 0, -1, 0 );
+    
+    if( cur )
+    {
+        lgrn_tbl_t *t = NULL;
+        grn_obj *obj = NULL;
+        lgrn_tblname_t tname;
+        int noname = 0;
+        grn_id id;
+        
+        lua_newtable( L );
+        while( ( id = grn_table_cursor_next( ctx, cur ) ) != GRN_ID_NIL )
+        {
+            if( ( obj = grn_ctx_at( ctx, id ) ) )
+            {
+                // check object type
+                if( lgroonga_obj_istbl( obj ) )
+                {
+                    // get table name
+                    if( lgroonga_get_tblname( &tname, ctx, obj ) ){
+                        lua_pushlstring( L, tname.name, (size_t)tname.len );
+                    }
+                    // temporary table has no name
+                    else {
+                        lua_pushinteger( L, ++noname );
+                    }
+                    
+                    // create table metatable
+                    t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) );
+                    // nomem error
+                    if( !t ){
+                        lua_pushnil( L );
+                        lua_pushstring( L, strerror( errno ) );
+                        return 2;
+                    }
+                    lstate_setmetatable( L, GROONGA_TABLE_MT );
+                    lua_rawset( L, -3 );
+                    // retain references
+                    t->tbl = obj;
+                    t->ctx = ctx;
+                    t->ref_g = lstate_refat( L, 1 );
+                }
+                else {
+                    grn_obj_unlink( ctx, obj );
+                }
+            }
+        }
+        grn_table_cursor_close(ctx, cur);
+    }
+    else {
+        lua_pushnil( L );
+    }
+    
+    return 1;
+}
+
+
 // MARK: database API
 
 // close db
@@ -216,6 +278,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { "touch", touch_lua },
         { "path", path_lua },
         { "table", table_lua },
+        { "tables", tables_lua },
         { NULL, NULL }
     };
     struct luaL_Reg funcs[] = {
