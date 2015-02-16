@@ -176,6 +176,67 @@ static inline lua_Integer lstate_toptinteger( lua_State *L, const char *k,
 }
 
 
+// table iterator
+typedef struct {
+    lua_State *L;
+    lua_Integer idx;
+    int prev;
+} lstate_iter_t;
+
+
+static inline int lstate_iter_init( lstate_iter_t *it, lua_State *L, int idx )
+{
+    it->L = L;
+    it->idx = 0;
+    it->prev = LUA_TTABLE;
+    // copy
+    lua_pushvalue( L, idx );
+    // push space
+    lua_pushnil( L );
+    
+    return 0;
+}
+
+
+// remove unused stack items
+static inline void lstate_iter_dispose( lstate_iter_t *it )
+{
+    lua_pop( it->L, 1 );
+}
+
+
+// each array value
+static inline int lstate_eachi( lstate_iter_t *it )
+{
+    if( it->prev != LUA_TNIL )
+    {
+        lua_State *L = it->L;
+        lua_Number idx = 0;
+        
+        if( it->idx != 0 ){
+            lua_pop( L, 1 );
+        }
+        
+        while( lua_next( L, -2 ) )
+        {
+            // key must be unsigned integer
+            if( lua_type( L, -2 ) == LUA_TNUMBER )
+            {
+                idx = lua_tonumber( L, -2 );
+                if( LUANUM_ISUINT( idx ) ){
+                    it->idx = (lua_Integer)idx;
+                    return lua_type( L, -1 );
+                }
+            }
+            lua_pop( L, 1 );
+        }
+        it->prev = LUA_TNIL;
+    }
+    
+    return LUA_TNIL;
+}
+
+
 // MARK: constants
 // metatable names
 #define GROONGA_MT          "groonga"

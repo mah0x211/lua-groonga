@@ -216,40 +216,33 @@ static int table_create_lua( lua_State *L )
             if( lstate_tchecktype( L, "flags", LUA_TTABLE, 1 ) == LUA_TTABLE )
             {
                 int type = 0;
-                lua_Number idx = 0;
                 lua_Number val = 0;
+                lstate_iter_t it;
                 
-                // push space
-                lua_pushnil( L );
-                while( lua_next( L, -2 ) )
+                lstate_iter_init( &it, L, -1 );
+                while( ( type = lstate_eachi( &it ) ) != LUA_TNIL )
                 {
-                    // allow array's value only
-                    if( lua_type( L, -2 ) == LUA_TNUMBER &&
-                        ( idx = lua_tonumber( L, -2 ) ) >= 1 &&
-                        LUANUM_ISUINT( idx ) )
-                    {
-                        type = lua_type( L, -1 );
-                        // invalid value type
-                        if( type != LUA_TNUMBER ){
-                            lstate_argerror( L, 2, 
-                                "flags#%ld = unsigned number expected, got %s",
-                                (lua_Integer)idx, lua_typename( L, type )
-                            );
-                        }
-                        val = lua_tonumber( L, -1 );
-                        if( !LUANUM_ISUINT( val ) ){
-                            lstate_argerror( L, 2, 
-                                "flags#%ld = unsigned number expected, got %f", 
-                                (lua_Integer)idx, val
-                            );
-                        }
-                        // set flag
-                        flags |= (grn_obj_flags)val;
+                    // invalid value type
+                    if( type != LUA_TNUMBER ){
+                        lstate_argerror( L, 2, 
+                            "flags#%ld = unsigned number expected, got %s",
+                            it.idx, lua_typename( L, type )
+                        );
                     }
-                    lua_pop( L, 1 );
+                    val = lua_tonumber( L, -1 );
+                    if( !LUANUM_ISUINT( val ) ){
+                        lstate_argerror( L, 2, 
+                            "flags#%ld = unsigned number expected, got %f", 
+                            it.idx, val
+                        );
+                    }
+                    // set flag
+                    flags |= (grn_obj_flags)val;
                 }
+                lstate_iter_dispose( &it );
+                // remove flags table
+                lua_pop( L, 1 );
             }
-            lua_pop( L, 1 );
         }
 
         // create table metatable
