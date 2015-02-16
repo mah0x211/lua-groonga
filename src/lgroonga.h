@@ -75,14 +75,42 @@
 }while(0)
 
 
+static inline int lstate_tchecktype( lua_State *L, const char *k, int t, 
+                                     int except_nil )
+{ 
+    const int argc = lua_gettop( L );
+    int type = 0;
+    
+    lua_pushstring( L, k );
+    lua_gettable( L, -2 );
+    type = lua_type( L, -1 );
+    if( type != t )
+    {
+        lua_pop( L, 1 );
+        if( except_nil && type == LUA_TNIL ){
+            return LUA_TNIL;
+        }
+        else {
+            char msg[255];
+            snprintf( 
+                msg, 255, "%s = %s expected, got %s", 
+                k, lua_typename( L, t ), lua_typename( L, type ) 
+            );
+            return luaL_argerror( L, argc, msg );
+        }
+    }
+    
+    return t;
+}
+
+
 static inline const char *lstate_tchecklstring( lua_State *L, const char *k, 
                                                 size_t *len )
 { 
     const char *v = NULL;
     
-    lua_pushstring( L, k );
-    lua_gettable( L, -2 );
-    v = luaL_checklstring( L, -1, len );
+    lstate_tchecktype( L, k, LUA_TSTRING, 0 );
+    v = lua_tolstring( L, -1, len );
     lua_pop( L, 1 );
     
     return v;
@@ -98,28 +126,14 @@ static inline const char *lstate_tcheckstring( lua_State *L, const char *k )
 
 static inline const char *lstate_toptlstring( lua_State *L, const char *k, 
                                               const char *defval, size_t *len )
-{ 
-    const int argc = lua_gettop( L );
-    const char *v = NULL;
-    int type = 0;
+{
+    if( lstate_tchecktype( L, k, LUA_TSTRING, 1 ) == LUA_TSTRING ){
+        const char *v = lua_tolstring( L, -1, len );
+        lua_pop( L, 1 );
+        return v;
+    }
     
-    lua_pushstring( L, k );
-    lua_gettable( L, -2 );
-    type = lua_type( L, -1 );
-    if( type == LUA_TNIL ){
-        v = defval;
-    }
-    else if( type == LUA_TSTRING ){
-        v = lua_tolstring( L, -1, len );
-    }
-    else {
-        char msg[255];
-        snprintf( msg, 255, "string expected, got %s", lua_typename( L, type ) );
-        luaL_argerror( L, argc, msg );
-    }
-    lua_pop( L, 1 );
-    
-    return v;
+    return defval;
 }
 
 
