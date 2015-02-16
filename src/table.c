@@ -35,15 +35,15 @@
 static int name_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
-    lgrn_tblname_t tname;
+    lgrn_objname_t oname;
     
     if( !t->tbl ){
         lua_pushnil( L );
         lua_pushstring( L, LGRN_ENOTABLE );
         return 2;
     }
-    else if( lgrn_get_tblname( &tname, lgrn_get_ctx( t->g ), t->tbl ) ){
-        lua_pushlstring( L, tname.name, (size_t)tname.len );
+    else if( lgrn_get_objname( &oname, lgrn_get_ctx( t->g ), t->tbl ) ){
+        lua_pushlstring( L, oname.name, (size_t)oname.len );
     }
     // temporary table
     else {

@@ -390,14 +390,14 @@ static inline grn_rc lgrn_iter_dispose( lgrn_iter_t *it )
 typedef struct {
     int len;
     char name[GRN_TABLE_MAX_KEY_SIZE];
-} lgrn_tblname_t;
+} lgrn_objname_t;
 
 
-static inline int lgrn_get_tblname( lgrn_tblname_t *tname, grn_ctx *ctx, 
-                                    grn_obj *tbl )
+static inline int lgrn_get_objname( lgrn_objname_t *oname, grn_ctx *ctx, 
+                                    grn_obj *obj )
 {
-    tname->len = grn_obj_name( ctx, tbl, tname->name, GRN_TABLE_MAX_KEY_SIZE );
-    return tname->len;
+    oname->len = grn_obj_name( ctx, obj, oname->name, GRN_TABLE_MAX_KEY_SIZE );
+    return oname->len;
 }
 
 

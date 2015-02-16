@@ -96,7 +96,7 @@ static int tables_next_lua( lua_State *L )
     {
         lgrn_tbl_t *t = NULL;
         grn_obj *tbl = NULL;
-        lgrn_tblname_t tname;
+        lgrn_objname_t oname;
         
         while( lgrn_tbl_iter_next( it, &tbl ) == GRN_SUCCESS )
         {
@@ -113,8 +113,8 @@ static int tables_next_lua( lua_State *L )
                 t->removed = 0;
                 
                 // get table name
-                if( lgrn_get_tblname( &tname, it->ctx, tbl ) ){
-                    lua_pushlstring( L, tname.name, (size_t)tname.len );
+                if( lgrn_get_objname( &oname, it->ctx, tbl ) ){
+                    lua_pushlstring( L, oname.name, (size_t)oname.len );
                 }
                 // temporary table has no name
                 else {
