@@ -152,6 +152,133 @@ static int tables_lua( lua_State *L )
 }
 
 
+static int table_create_lua( lua_State *L )
+{
+    lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    
+    if( !lgrn_get_db( g ) ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENODB );
+        return 2;
+    }
+    else
+    {
+        grn_ctx *ctx = lgrn_get_ctx( g );
+        size_t len = 0;
+        const char *name = NULL;
+        const char *path = NULL;
+        grn_obj *ktype = NULL;
+        grn_obj *vtype = NULL;
+        grn_obj_flags flags = 0;
+        grn_obj *tbl = NULL;
+        lgrn_tbl_t *t = NULL;
+        
+        // check arguments
+        if( lua_gettop( L ) > 1 )
+        {
+            lua_Integer id;
+            
+            lua_settop( L, 2 );
+            luaL_checktype( L, 2, LUA_TTABLE );
+            
+            // path
+            path = lstate_toptstring( L, "path", NULL );
+            
+            // keyType
+            id = lstate_toptinteger( L, "keyType", -1 );
+            if( id > -1 && !( ktype = grn_ctx_at( ctx, id ) ) ){
+                return luaL_argerror( L, 2, "invalid keyType value" );
+            }
+            
+            // valType
+            id = lstate_toptinteger( L, "valType", -1 );
+            if( id > -1 && !( vtype = grn_ctx_at( ctx, id ) ) ){
+                return luaL_argerror( L, 2, "invalid valType value" );
+            }
+            
+            // name
+            name = lstate_toptlstring( L, "name", NULL, &len );
+            if( len > UINT_MAX ){
+                lua_pushnil( L );
+                lua_pushfstring( L, "table name length must be less than %d", 
+                                 GRN_TABLE_MAX_KEY_SIZE );
+                return 2;
+            }
+            // set persistent flag automatically if name is not null
+            else if( len ){
+                flags |= GRN_OBJ_PERSISTENT;
+            }
+            
+            // flags
+            if( lstate_tchecktype( L, "flags", LUA_TTABLE, 1 ) == LUA_TTABLE )
+            {
+                int type = 0;
+                lua_Number idx = 0;
+                lua_Number val = 0;
+                
+                // push space
+                lua_pushnil( L );
+                while( lua_next( L, -2 ) )
+                {
+                    // allow array's value only
+                    if( lua_type( L, -2 ) == LUA_TNUMBER &&
+                        ( idx = lua_tonumber( L, -2 ) ) >= 1 &&
+                        LUANUM_ISUINT( idx ) )
+                    {
+                        type = lua_type( L, -1 );
+                        // invalid value type
+                        if( type != LUA_TNUMBER ){
+                            lstate_argerror( L, 2, 
+                                "flags#%ld = unsigned number expected, got %s",
+                                (lua_Integer)idx, lua_typename( L, type )
+                            );
+                        }
+                        val = lua_tonumber( L, -1 );
+                        if( !LUANUM_ISUINT( val ) ){
+                            lstate_argerror( L, 2, 
+                                "flags#%ld = unsigned number expected, got %f", 
+                                (lua_Integer)idx, val
+                            );
+                        }
+                        // set flag
+                        flags |= (grn_obj_flags)val;
+                    }
+                    lua_pop( L, 1 );
+                }
+            }
+            lua_pop( L, 1 );
+        }
+
+        // create table metatable
+        if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) )
+        {
+            // create table
+            if( ( tbl = grn_table_create( ctx, name, (unsigned int)len, path, 
+                                          flags, ktype, vtype ) ) )
+            {
+                lstate_setmetatable( L, GROONGA_TABLE_MT );
+                // retain references
+                t->ref_g = lstate_refat( L, 1 );
+                t->g = lgrn_retain( g );
+                t->tbl = tbl;
+                return 1;
+            }
+            
+            // got error
+            lua_pushnil( L );
+            lua_pushstring( L, ctx->errbuf );
+        }
+        // nomem error
+        else {
+            lua_pushnil( L );
+            lua_pushstring( L, strerror( errno ) );
+        }
+    
+        return 2;
+    }
+}
+
+
 // MARK: database API
 
 static int path_lua( lua_State *L )
@@ -302,6 +429,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { "remove", remove_lua },
         { "touch", touch_lua },
         { "path", path_lua },
+        { "tableCreate", table_create_lua },
         { "table", table_lua },
         { "tables", tables_lua },
         { NULL, NULL }
