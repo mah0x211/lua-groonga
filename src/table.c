@@ -125,6 +125,32 @@ static int key_type_lua( lua_State *L )
 }
 
 
+static int val_type_lua( lua_State *L )
+{
+    lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    
+    if( !t->tbl ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        return 2;
+    }
+    else
+    {
+        grn_ctx *ctx = lgrn_get_ctx( t->g );
+        grn_id id = grn_obj_get_range( ctx, t->tbl );
+        
+        if( id != GRN_ID_NIL ){
+            lua_pushinteger( L, id );
+        }
+        else {
+            lua_pushnil( L );
+        }
+        
+        return 1;
+    }
+}
+
+
 static int persistent_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
@@ -196,6 +222,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L )
         { "path", path_lua },
         { "flags", flags_lua },
         { "keyType", key_type_lua },
+        { "valType", val_type_lua },
         { "persistent", persistent_lua },
         { NULL, NULL }
     };
