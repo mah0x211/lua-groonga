@@ -349,25 +349,25 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     lstate_int2tbl( L, "WITH_WEIGHT", GRN_OBJ_WITH_WEIGHT );
     lstate_int2tbl( L, "WITH_POSITION", GRN_OBJ_WITH_POSITION );
     // data type
-    lstate_int2tbl( L, "T_VOID", GRN_DB_VOID );
-    lstate_int2tbl( L, "T_DB", GRN_DB_DB );
-    lstate_int2tbl( L, "T_OBJECT", GRN_DB_OBJECT );
-    lstate_int2tbl( L, "T_BOOL", GRN_DB_BOOL );
-    lstate_int2tbl( L, "T_INT8", GRN_DB_INT8 );
-    lstate_int2tbl( L, "T_UINT8", GRN_DB_UINT8 );
-    lstate_int2tbl( L, "T_INT16", GRN_DB_INT16 );
-    lstate_int2tbl( L, "T_UINT16", GRN_DB_UINT16 );
-    lstate_int2tbl( L, "T_INT32", GRN_DB_INT32 );
-    lstate_int2tbl( L, "T_UINT32", GRN_DB_UINT32 );
-    lstate_int2tbl( L, "T_INT64", GRN_DB_INT64 );
-    lstate_int2tbl( L, "T_UINT64", GRN_DB_UINT64 );
-    lstate_int2tbl( L, "T_FLOAT", GRN_DB_FLOAT );
-    lstate_int2tbl( L, "T_TIME", GRN_DB_TIME );
-    lstate_int2tbl( L, "T_SHORT_TEXT", GRN_DB_SHORT_TEXT );
-    lstate_int2tbl( L, "T_TEXT", GRN_DB_TEXT );
-    lstate_int2tbl( L, "T_LONG_TEXT", GRN_DB_LONG_TEXT );
-    lstate_int2tbl( L, "T_TOKYO_GEO", GRN_DB_TOKYO_GEO_POINT );
-    lstate_int2tbl( L, "T_WGS84_GEO", GRN_DB_WGS84_GEO_POINT );
+    lstate_int2tbl( L, "VOID", GRN_DB_VOID );
+    lstate_int2tbl( L, "DB", GRN_DB_DB );
+    lstate_int2tbl( L, "OBJECT", GRN_DB_OBJECT );
+    lstate_int2tbl( L, "BOOL", GRN_DB_BOOL );
+    lstate_int2tbl( L, "INT8", GRN_DB_INT8 );
+    lstate_int2tbl( L, "UINT8", GRN_DB_UINT8 );
+    lstate_int2tbl( L, "INT16", GRN_DB_INT16 );
+    lstate_int2tbl( L, "UINT16", GRN_DB_UINT16 );
+    lstate_int2tbl( L, "INT32", GRN_DB_INT32 );
+    lstate_int2tbl( L, "UINT32", GRN_DB_UINT32 );
+    lstate_int2tbl( L, "INT64", GRN_DB_INT64 );
+    lstate_int2tbl( L, "UINT64", GRN_DB_UINT64 );
+    lstate_int2tbl( L, "FLOAT", GRN_DB_FLOAT );
+    lstate_int2tbl( L, "TIME", GRN_DB_TIME );
+    lstate_int2tbl( L, "SHORT_TEXT", GRN_DB_SHORT_TEXT );
+    lstate_int2tbl( L, "TEXT", GRN_DB_TEXT );
+    lstate_int2tbl( L, "LONG_TEXT", GRN_DB_LONG_TEXT );
+    lstate_int2tbl( L, "TOKYO_GEO", GRN_DB_TOKYO_GEO_POINT );
+    lstate_int2tbl( L, "WGS84_GEO", GRN_DB_WGS84_GEO_POINT );
 
     return 1;
 }
