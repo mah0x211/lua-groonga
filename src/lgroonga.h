@@ -33,6 +33,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdint.h>
+#include <math.h>
 #include <lua.h>
 #include <lauxlib.h>
 #include <groonga/groonga.h>
