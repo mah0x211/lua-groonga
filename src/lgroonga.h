@@ -40,6 +40,11 @@
 // MARK: helper macros
 #define pdealloc(p)     free((void*)(p))
 
+#define LUANUM_ISDBL(val)   ((lua_Number)((lua_Integer)val) != val)
+
+#define LUANUM_ISUINT(val)  (!signbit( val ) && !LUANUM_ISDBL( val ))
+
+
 #define lstate_setmetatable(L,tname) do { \
     luaL_getmetatable( L, tname ); \
     lua_setmetatable( L, -2 ); \
