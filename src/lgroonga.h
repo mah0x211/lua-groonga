@@ -280,10 +280,10 @@ static inline int lgrn_register_fn( lua_State *L, struct luaL_Reg method[] )
     
     // methods
     lua_newtable( L );
-    do {
+    while( ptr->name ){
         lstate_fn2tbl( L, ptr->name, ptr->func );
         ptr++;
-    } while( ptr->name );
+    }
     
     return 1;
 }
@@ -299,10 +299,10 @@ static inline int lgrn_register_mt( lua_State *L, const char *tname,
         struct luaL_Reg *ptr = mmethod;
         
         // metamethods
-        do {
+        while( ptr->name ){
             lstate_fn2tbl( L, ptr->name, ptr->func );
             ptr++;
-        } while( ptr->name );
+        }
         
         // methods
         if( method ){
