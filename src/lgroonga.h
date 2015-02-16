@@ -87,6 +87,7 @@ typedef struct {
 typedef struct {
     lgrn_t *g;
     grn_obj *tbl;
+    uint8_t removed;
     int ref_g;
 } lgrn_tbl_t;
 

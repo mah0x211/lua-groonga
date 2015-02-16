@@ -19,7 +19,7 @@
  *  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
  *  DEALINGS IN THE SOFTWARE.
  *
- *  schema_tbl.c
+ *  table.c
  *  lua-groonga
  *
  *  Created by Masatoshi Teruya on 2015/02/15.
@@ -30,13 +30,19 @@
 
 #define MODULE_MT   GROONGA_TABLE_MT
 
+#define LGRN_ENOTABLE  "table has been removed"
 
 static int name_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
     lgrn_tblname_t tname;
     
-    if( lgrn_get_tblname( &tname, lgrn_get_ctx( t->g ), t->tbl ) ){
+    if( !t->tbl ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        return 2;
+    }
+    else if( lgrn_get_tblname( &tname, lgrn_get_ctx( t->g ), t->tbl ) ){
         lua_pushlstring( L, tname.name, (size_t)tname.len );
     }
     // temporary table
@@ -51,9 +57,14 @@ static int name_lua( lua_State *L )
 static int path_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
-    const char *path = grn_obj_path( lgrn_get_ctx( t->g ), t->tbl );
+    const char *path = NULL;
     
-    if( path ){
+    if( !t->tbl ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        return 2;
+    }
+    else if( ( path = grn_obj_path( lgrn_get_ctx( t->g ), t->tbl ) ) ){
         lua_pushstring( L, path );
     }
     else {
@@ -67,6 +78,12 @@ static int path_lua( lua_State *L )
 static int type_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    
+    if( !t->tbl ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        return 2;
+    }
     
     switch( t->tbl->header.flags & GRN_OBJ_TABLE_TYPE_MASK ){
         case GRN_OBJ_TABLE_HASH_KEY:
@@ -90,18 +107,27 @@ static int type_lua( lua_State *L )
 static int domain_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
-    grn_ctx *ctx = lgrn_get_ctx( t->g );
-    grn_obj *obj = grn_ctx_at( ctx, t->tbl->header.domain );
-    lgrn_tblname_t tname;
     
-    if( obj && lgrn_get_tblname( &tname, ctx, obj ) ){
-        lua_pushlstring( L, tname.name, (size_t)tname.len );
-    }
-    else {
+    if( !t->tbl ){
         lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        return 2;
     }
-
-    return 1;
+    else
+    {
+        grn_ctx *ctx = lgrn_get_ctx( t->g );
+        grn_obj *obj = grn_ctx_at( ctx, t->tbl->header.domain );
+        lgrn_tblname_t tname;
+        
+        if( obj && lgrn_get_tblname( &tname, ctx, obj ) ){
+            lua_pushlstring( L, tname.name, (size_t)tname.len );
+        }
+        else {
+            lua_pushnil( L );
+        }
+        
+        return 1;
+    }
 }
 
 
@@ -109,9 +135,30 @@ static int persistent_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
     
+    if( !t->tbl ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        return 2;
+    }
+    
     lua_pushboolean( L, t->tbl->header.flags & GRN_OBJ_PERSISTENT );
 
     return 1;
+}
+
+
+static int remove_lua( lua_State *L )
+{
+    lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    
+    t->removed = 1;
+    // force remove
+    if( t->tbl && lua_isboolean( L, 2 ) && lua_toboolean( L, 2 ) ){
+        grn_obj_remove( lgrn_get_ctx( t->g ), t->tbl );
+        t->tbl = NULL;
+    }
+    
+    return 0;
 }
 
 
@@ -125,8 +172,14 @@ static int gc_lua( lua_State *L )
 {
     lgrn_tbl_t *t = lua_touserdata( L, 1 );
     
-    if( t->tbl ){
-        grn_obj_unlink( lgrn_get_ctx( t->g ), t->tbl );
+    if( t->tbl )
+    {
+        if( t->removed ){
+            grn_obj_remove( lgrn_get_ctx( t->g ), t->tbl );
+        }
+        else {
+            grn_obj_unlink( lgrn_get_ctx( t->g ), t->tbl );
+        }
     }
     // release reference
     lstate_unref( L, t->ref_g );
@@ -144,6 +197,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L )
         { NULL, NULL }
     };
     struct luaL_Reg methods[] = {
+        { "remove", remove_lua },
         { "name", name_lua },
         { "path", path_lua },
         { "type", type_lua },
