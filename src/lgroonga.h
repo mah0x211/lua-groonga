@@ -75,6 +75,20 @@
 }while(0)
 
 
+static inline int lstate_targerror( lua_State *L, int arg, const char *k, 
+                                    int expected, int type )
+{
+    char msg[255];
+    
+    snprintf( 
+        msg, 255, "%s = %s expected, got %s", 
+        k, lua_typename( L, expected ), lua_typename( L, type ) 
+    );
+    
+    return luaL_argerror( L, arg, msg );
+}
+
+
 static inline int lstate_tchecktype( lua_State *L, const char *k, int t, 
                                      int except_nil )
 { 
@@ -91,12 +105,7 @@ static inline int lstate_tchecktype( lua_State *L, const char *k, int t,
             return LUA_TNIL;
         }
         else {
-            char msg[255];
-            snprintf( 
-                msg, 255, "%s = %s expected, got %s", 
-                k, lua_typename( L, t ), lua_typename( L, type ) 
-            );
-            return luaL_argerror( L, argc, msg );
+            return lstate_targerror( L, argc, k, t, type );
         }
     }
     
