@@ -81,17 +81,20 @@
 }while(0)
 
 
+#define lstate_argerror( L, arg, ... ) do{ \
+    char _msg[255]; \
+    snprintf( _msg, 255, __VA_ARGS__ ); \
+    return luaL_argerror( L, arg, _msg ); \
+}while(0)
+
+
 static inline int lstate_targerror( lua_State *L, int arg, const char *k, 
                                     int expected, int type )
 {
-    char msg[255];
-    
-    snprintf( 
-        msg, 255, "%s = %s expected, got %s", 
+    lstate_argerror( 
+        L, arg, "%s = %s expected, got %s", 
         k, lua_typename( L, expected ), lua_typename( L, type ) 
     );
-    
-    return luaL_argerror( L, arg, msg );
 }
 
 
@@ -171,6 +174,7 @@ static inline lua_Integer lstate_toptinteger( lua_State *L, const char *k,
     
     return defval;
 }
+
 
 // MARK: constants
 // metatable names
