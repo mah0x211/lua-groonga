@@ -366,8 +366,8 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     lstate_int2tbl( L, "SHORT_TEXT", GRN_DB_SHORT_TEXT );
     lstate_int2tbl( L, "TEXT", GRN_DB_TEXT );
     lstate_int2tbl( L, "LONG_TEXT", GRN_DB_LONG_TEXT );
-    lstate_int2tbl( L, "TOKYO_GEO", GRN_DB_TOKYO_GEO_POINT );
-    lstate_int2tbl( L, "WGS84_GEO", GRN_DB_WGS84_GEO_POINT );
+    lstate_int2tbl( L, "TOKYO_GEO_POINT", GRN_DB_TOKYO_GEO_POINT );
+    lstate_int2tbl( L, "WGS84_GEO_POINT", GRN_DB_WGS84_GEO_POINT );
 
     return 1;
 }
