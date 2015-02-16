@@ -241,6 +241,7 @@ static inline int lstate_eachi( lstate_iter_t *it )
 // metatable names
 #define GROONGA_MT          "groonga"
 #define GROONGA_TABLE_MT    "groonga.table"
+#define GROONGA_COLUMN_MT   "groonga.column"
 
 
 // MARK: structures
@@ -259,9 +260,18 @@ typedef struct {
 } lgrn_tbl_t;
 
 
+typedef struct {
+    lgrn_t *g;
+    grn_obj *col;
+    uint8_t removed;
+    int ref_t;
+} lgrn_col_t;
+
+
 // MARK: prototypes
 LUALIB_API int luaopen_groonga( lua_State *L );
 LUALIB_API int luaopen_groonga_table( lua_State *L );
+LUALIB_API int luaopen_groonga_column( lua_State *L );
 
 
 // MARK: helper API

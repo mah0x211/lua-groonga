@@ -24,7 +24,8 @@ build = {
         groonga = {
             sources = {
                 "src/lgroonga.c",
-                "src/table.c"
+                "src/table.c",
+                "src/column.c"
             },
             libraries = { "groonga" },
             incdirs = {

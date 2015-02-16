@@ -483,6 +483,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     lgrn_register_mt( L, MODULE_MT, mmethods, methods );
     // register related module
     luaopen_groonga_table( L );
+    luaopen_groonga_column( L );
     
     // create module table
     lgrn_register_fn( L, funcs );
