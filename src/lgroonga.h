@@ -69,6 +69,67 @@
     lua_rawset(L,-3); \
 }while(0)
 
+#define lstate_int2arr(L,i,v) do{ \
+    lua_pushinteger(L,v); \
+    lua_rawseti(L,-2,i); \
+}while(0)
+
+
+static inline const char *lstate_tchecklstring( lua_State *L, const char *k, 
+                                                size_t *len )
+{ 
+    const char *v = NULL;
+    
+    lua_pushstring( L, k );
+    lua_gettable( L, -2 );
+    v = luaL_checklstring( L, -1, len );
+    lua_pop( L, 1 );
+    
+    return v;
+}
+
+
+static inline const char *lstate_tcheckstring( lua_State *L, const char *k )
+{ 
+    size_t len = 0;
+    return lstate_tchecklstring( L, k, &len );
+}
+
+
+static inline const char *lstate_toptlstring( lua_State *L, const char *k, 
+                                              const char *defval, size_t *len )
+{ 
+    const int argc = lua_gettop( L );
+    const char *v = NULL;
+    int type = 0;
+    
+    lua_pushstring( L, k );
+    lua_gettable( L, -2 );
+    type = lua_type( L, -1 );
+    if( type == LUA_TNIL ){
+        v = defval;
+    }
+    else if( type == LUA_TSTRING ){
+        v = lua_tolstring( L, -1, len );
+    }
+    else {
+        char msg[255];
+        snprintf( msg, 255, "string expected, got %s", lua_typename( L, type ) );
+        luaL_argerror( L, argc, msg );
+    }
+    lua_pop( L, 1 );
+    
+    return v;
+}
+
+
+static inline const char *lstate_toptstring( lua_State *L, const char *k, 
+                                             const char *defval )
+{
+    size_t len = 0;
+    return lstate_toptlstring( L, k, defval, &len );
+}
+
 
 // MARK: constants
 // metatable names
