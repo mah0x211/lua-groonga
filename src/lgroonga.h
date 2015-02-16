@@ -145,6 +145,18 @@ static inline const char *lstate_toptstring( lua_State *L, const char *k,
 }
 
 
+static inline lua_Integer lstate_toptinteger( lua_State *L, const char *k,
+                                              lua_Integer defval )
+{
+    if( lstate_tchecktype( L, k, LUA_TNUMBER, 1 ) == LUA_TNUMBER ){
+        lua_Integer v = lua_tointeger( L, -1 );
+        lua_pop( L, 1 );
+        return v;
+    }
+    
+    return defval;
+}
+
 // MARK: constants
 // metatable names
 #define GROONGA_MT          "groonga"
