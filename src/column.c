@@ -54,6 +54,27 @@ static int name_lua( lua_State *L )
 }
 
 
+static int path_lua( lua_State *L )
+{
+    lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    const char *path = NULL;
+    
+    if( !c->col ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOCOLUMN );
+        return 2;
+    }
+    else if( ( path = grn_obj_path( lgrn_get_ctx( c->g ), c->col ) ) ){
+        lua_pushstring( L, path );
+    }
+    else {
+        lua_pushnil( L );
+    }
+    
+    return 1;
+}
+
+
 static int tostring_lua( lua_State *L )
 {
     return lgrn_tostring( L, MODULE_MT );
@@ -89,6 +110,7 @@ LUALIB_API int luaopen_groonga_column( lua_State *L )
     };
     struct luaL_Reg methods[] = {
         { "name", name_lua },
+        { "path", path_lua },
         { NULL, NULL }
     };
     
