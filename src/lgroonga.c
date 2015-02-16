@@ -63,6 +63,8 @@ static int table_lua( lua_State *L )
                     t->ref_g = lstate_refat( L, 1 );
                     t->g = lgrn_retain( g );
                     t->tbl = obj;
+                    t->removed = 0;
+                    
                     return 1;
                 }
                 
@@ -108,6 +110,7 @@ static int tables_next_lua( lua_State *L )
                 t->ref_g = lstate_ref( L );
                 t->g = lgrn_retain( g );
                 t->tbl = tbl;
+                t->removed = 0;
                 
                 // get table name
                 if( lgrn_get_tblname( &tname, it->ctx, tbl ) ){
@@ -261,6 +264,8 @@ static int table_create_lua( lua_State *L )
                 t->ref_g = lstate_refat( L, 1 );
                 t->g = lgrn_retain( g );
                 t->tbl = tbl;
+                t->removed = 0;
+                
                 return 1;
             }
             
