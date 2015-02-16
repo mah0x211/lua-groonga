@@ -113,10 +113,7 @@ static int key_type_lua( lua_State *L )
     }
     else
     {
-        grn_ctx *ctx = lgrn_get_ctx( t->g );
-        grn_obj *obj = grn_ctx_at( ctx, t->tbl->header.domain );
-        
-        if( obj ){
+        if( t->tbl->header.domain != GRN_ID_NIL ){
             lua_pushinteger( L, t->tbl->header.domain );
         }
         else {
