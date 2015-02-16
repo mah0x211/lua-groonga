@@ -75,9 +75,10 @@ static int path_lua( lua_State *L )
 }
 
 
-static int type_lua( lua_State *L )
+static int flags_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    int idx = 1;
     
     if( !t->tbl ){
         lua_pushnil( L );
@@ -85,19 +86,16 @@ static int type_lua( lua_State *L )
         return 2;
     }
     
-    switch( t->tbl->header.flags & GRN_OBJ_TABLE_TYPE_MASK ){
-        case GRN_OBJ_TABLE_HASH_KEY:
-            lua_pushstring( L, "TABLE_HASH_KEY" );
-        break;
-        case GRN_OBJ_TABLE_PAT_KEY:
-            lua_pushstring( L, "TABLE_PAT_KEY" );
-        break;
-        case GRN_OBJ_TABLE_DAT_KEY:
-            lua_pushstring( L, "TABLE_DAT_KEY" );
-        break;
-        case GRN_OBJ_TABLE_NO_KEY:
-            lua_pushstring( L, "TABLE_NO_KEY" );
-        break;
+    lua_newtable( L );
+    lstate_int2arr( L, idx++, t->tbl->header.flags & GRN_OBJ_TABLE_TYPE_MASK );
+    if( t->tbl->header.flags & GRN_OBJ_KEY_WITH_SIS ){
+        lstate_int2arr( L, idx++, GRN_OBJ_KEY_WITH_SIS );
+    }
+    if( t->tbl->header.flags & GRN_OBJ_KEY_NORMALIZE ){
+        lstate_int2arr( L, idx++, GRN_OBJ_KEY_NORMALIZE );
+    }
+    if( t->tbl->header.flags & GRN_OBJ_PERSISTENT ){
+        lstate_int2arr( L, idx++, GRN_OBJ_PERSISTENT );
     }
     
     return 1;
@@ -200,7 +198,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L )
         { "remove", remove_lua },
         { "name", name_lua },
         { "path", path_lua },
-        { "type", type_lua },
+        { "flags", flags_lua },
         { "domain", domain_lua },
         { "persistent", persistent_lua },
         { NULL, NULL }
