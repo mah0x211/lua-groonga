@@ -102,7 +102,7 @@ static int flags_lua( lua_State *L )
 }
 
 
-static int domain_lua( lua_State *L )
+static int key_type_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
     
@@ -115,10 +115,9 @@ static int domain_lua( lua_State *L )
     {
         grn_ctx *ctx = lgrn_get_ctx( t->g );
         grn_obj *obj = grn_ctx_at( ctx, t->tbl->header.domain );
-        lgrn_tblname_t tname;
         
-        if( obj && lgrn_get_tblname( &tname, ctx, obj ) ){
-            lua_pushlstring( L, tname.name, (size_t)tname.len );
+        if( obj ){
+            lua_pushinteger( L, t->tbl->header.domain );
         }
         else {
             lua_pushnil( L );
@@ -199,7 +198,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L )
         { "name", name_lua },
         { "path", path_lua },
         { "flags", flags_lua },
-        { "domain", domain_lua },
+        { "keyType", key_type_lua },
         { "persistent", persistent_lua },
         { NULL, NULL }
     };
