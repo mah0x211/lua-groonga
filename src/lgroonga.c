@@ -423,6 +423,43 @@ static int version_lua( lua_State *L )
 }
 
 
+// finalizing groonga library
+static int finalize_lua( lua_State *L )
+{
+    grn_fin();
+    return 0;
+}
+
+
+// initializing groonga library
+static int global_init( lua_State *L )
+{
+    struct luaL_Reg mmethods[] = {
+        { "__gc", finalize_lua },
+        { NULL, NULL }
+    };
+    char *finalizer = NULL;
+    
+    // create metatable
+    lgrn_register_mt( L, "groonga.finalizer", mmethods, NULL );
+    
+    // failed to initialize groonga global variables
+    // ???: should i construct error message?
+    if( grn_init() != GRN_SUCCESS ){
+        lua_pushfstring( L, "failed to grn_init()" );
+        return lua_error( L );
+    }
+    else if( !( finalizer = lua_newuserdata( L, sizeof( char ) ) ) ){
+        lua_pushfstring( L, "failed to allocate finalizer" );
+        return lua_error( L );
+    }
+    lstate_setmetatable( L, "groonga.finalizer" );
+    lstate_ref( L );
+    
+    return 0;
+}
+
+
 LUALIB_API int luaopen_groonga( lua_State *L )
 {
     struct luaL_Reg mmethods[] = {
@@ -446,19 +483,16 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { NULL, NULL }
     };
     
-    // failed to initialize groonga global variables
-    // ???: should i construct error message?
-    if( grn_init() != GRN_SUCCESS ){
-        return lua_error( L );
-    }
     
+    // initialize groonga global variables
+    global_init( L );
     // create metatable
     lgrn_register_mt( L, MODULE_MT, mmethods, methods );
-    // create module table
-    lgrn_register_fn( L, funcs );
     // register related module
     luaopen_groonga_table( L );
     
+    // create module table
+    lgrn_register_fn( L, funcs );
     // constants
     lstate_int2tbl( L, "PERSISTENT", GRN_OBJ_PERSISTENT );
     // table flags
