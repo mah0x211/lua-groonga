@@ -246,7 +246,7 @@ static int new_lua( lua_State *L )
         // open
         if( grn_db_open( &g->ctx, path ) ||
             // create database if path does not exists
-            ( lua_type( L, 2 ) == LUA_TBOOLEAN && lua_toboolean( L, 2 ) && 
+            ( lua_isboolean( L, 2 ) && lua_toboolean( L, 2 ) && 
               grn_db_create( &g->ctx, path, NULL ) ) ){
             lstate_setmetatable( L, MODULE_MT );
             g->removed = 0;
