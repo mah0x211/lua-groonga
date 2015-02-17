@@ -88,6 +88,7 @@ static int tables_next_lua( lua_State *L )
     lgrn_t *g = luaL_checkudata( L, lua_upvalueindex( 1 ), MODULE_MT );
     lgrn_tbl_iter_t *it = lua_touserdata( L, lua_upvalueindex( 2 ) );
     int ref = lua_tointeger( L, lua_upvalueindex( 3 ) );
+    int rv = 0;
     
     if( lgrn_get_db( g ) )
     {
@@ -115,22 +116,22 @@ static int tables_next_lua( lua_State *L )
                 else {
                     lua_pushnil( L );
                 }
+                
+                return 2;
             }
+            
             // nomem error
-            else {
-                grn_obj_unlink( it->ctx, tbl );
-                lstate_unref( L, ref );
-                lua_pushnil( L );
-                lua_pushstring( L, strerror( errno ) );
-            }
-            return 2;
+            grn_obj_unlink( it->ctx, tbl );
+            lua_pushnil( L );
+            lua_pushstring( L, strerror( errno ) );
+            rv = 2;
         }
     }
-    
+
     lgrn_tbl_iter_dispose( it );
     lstate_unref( L, ref );
     
-    return 0;
+    return rv;
 }
 
 
