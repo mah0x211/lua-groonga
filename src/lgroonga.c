@@ -48,22 +48,19 @@ static int table_lua( lua_State *L )
         grn_ctx *ctx = lgrn_get_ctx( g );
         size_t len = 0;
         const char *name = luaL_checklstring( L, 2, &len );
-        grn_obj *obj = NULL;
+        grn_obj *tbl = NULL;
         lgrn_tbl_t *t = NULL;
         
         if( len < GRN_TABLE_MAX_KEY_SIZE && 
-            ( obj = grn_ctx_get( ctx, name, len ) ) )
+            ( tbl = grn_ctx_get( ctx, name, len ) ) )
         {
-            if( lgrn_obj_istbl( obj ) )
+            if( lgrn_obj_istbl( tbl ) )
             {
                 // create table metatable
                 if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
                     lstate_setmetatable( L, GROONGA_TABLE_MT );
                     // retain references
-                    t->ref_g = lstate_refat( L, 1 );
-                    t->g = lgrn_retain( g );
-                    t->tbl = obj;
-                    t->removed = 0;
+                    lgrn_tbl_init( t, g, tbl, lstate_refat( L, 1 ) );
                     
                     return 1;
                 }
@@ -73,7 +70,7 @@ static int table_lua( lua_State *L )
                 lua_pushstring( L, strerror( errno ) );
                 rv = 2;
             }
-            grn_obj_unlink( ctx, obj );
+            grn_obj_unlink( ctx, tbl );
         }
         
         // not found
@@ -105,12 +102,10 @@ static int tables_next_lua( lua_State *L )
             if( t )
             {
                 lstate_setmetatable( L, GROONGA_TABLE_MT );
-                // retain references
+                // push db pointer
                 lstate_pushref( L, ref );
-                t->ref_g = lstate_ref( L );
-                t->g = lgrn_retain( g );
-                t->tbl = tbl;
-                t->removed = 0;
+                // retain references
+                lgrn_tbl_init( t, g, tbl, lstate_ref( L ) );
                 
                 // get table name
                 if( lgrn_get_objname( &oname, it->ctx, tbl ) ){
@@ -253,11 +248,8 @@ static int table_create_lua( lua_State *L )
                                           flags, ktype, vtype ) ) )
             {
                 lstate_setmetatable( L, GROONGA_TABLE_MT );
-                // retain references
-                t->ref_g = lstate_refat( L, 1 );
-                t->g = lgrn_retain( g );
-                t->tbl = tbl;
-                t->removed = 0;
+                // init fields
+                lgrn_tbl_init( t, g, tbl, lstate_refat( L, 1 ) );
                 
                 return 1;
             }
@@ -487,6 +479,15 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     
     // create module table
     lgrn_register_fn( L, funcs );
+    
+    //
+    // TODO: flag constants value type should change to string,
+    //       and these real flag values maintains in module private memory 
+    //       space as hash table.
+    //       that hash table use to lookup a real flag value by flag string as 
+    //       hash key. this architecture might be improving the usability and 
+    //       understandability.
+    //
     // constants
     lstate_int2tbl( L, "PERSISTENT", GRN_OBJ_PERSISTENT );
     // table flags

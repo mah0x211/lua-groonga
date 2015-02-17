@@ -259,6 +259,14 @@ typedef struct {
     int ref_g;
 } lgrn_tbl_t;
 
+// initialize lgrn_tbl_t
+#define lgrn_tbl_init( t, g, tbl, ref ) do { \
+    (t)->ref_g = ref; \
+    (t)->g = lgrn_retain( g ); \
+    (t)->tbl = tbl; \
+    (t)->removed = 0; \
+}while(0)
+
 
 typedef struct {
     lgrn_t *g;
