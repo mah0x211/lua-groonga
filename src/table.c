@@ -160,6 +160,165 @@ static int columns_lua( lua_State *L )
 
 }
 
+static int column_create_lua( lua_State *L )
+{
+    lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    
+    if( !t->tbl ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        return 2;
+    }
+    else
+    {
+        grn_ctx *ctx = lgrn_get_ctx( t->g );
+        size_t len = 0;
+        const char *name = NULL;
+        const char *path = NULL;
+        grn_obj *vtype = NULL;
+        grn_obj_flags flags = 0;
+        lgrn_col_t *c = NULL;
+        grn_obj *col = NULL;
+        
+        // check arguments
+        if( lua_gettop( L ) > 1 )
+        {
+            int id;
+            
+            lua_settop( L, 2 );
+            luaL_checktype( L, 2, LUA_TTABLE );
+            
+            // path
+            path = lstate_toptstring( L, "path", NULL );
+            
+            // type
+            name = lstate_toptstring( L, "type", NULL );
+            if( name )
+            {
+                id = lgrn_n2i_column( L, name );
+                if( id == -1 ){
+                    return luaL_argerror( L, 2, "invalid type value" );
+                }
+                flags |= id;
+            }
+            
+            // valType
+            name = lstate_toptstring( L, "valType", NULL );
+            if( name )
+            {
+                id = lgrn_n2i_data( L, name );
+                if( id == -1 || !( vtype = grn_ctx_at( ctx, id ) ) ){
+                    return luaL_argerror( L, 2, "invalid valType value" );
+                }
+            }
+            
+            // compress
+            name = lstate_toptstring( L, "compress", NULL );
+            if( name )
+            {
+                id = lgrn_n2i_compress( L, name );
+                if( id == -1 ){
+                    return luaL_argerror( L, 2, "invalid compress value" );
+                }
+                flags |= id;
+            }
+            
+            // name
+            name = lstate_toptlstring( L, "name", NULL, &len );
+            if( len > UINT_MAX ){
+                lua_pushnil( L );
+                lua_pushfstring( 
+                    L, "column name length must be less than %d", UINT_MAX 
+                );
+                return 2;
+            }
+            
+            // persistent flag
+            if( lstate_toptboolean( L, "persistent", 0 ) ){
+                flags |= GRN_OBJ_PERSISTENT;
+            }
+            // check path option
+            else if( path ){
+                lua_pushnil( L );
+                lua_pushfstring( L, "should be enabled persistent option if " \
+                                    "path option specified" );
+                return 2;
+            }
+            
+            // withWeight flag
+            if( lstate_toptboolean( L, "withWeight", 0 ) )
+            {
+                if( flags & GRN_OBJ_COLUMN_INDEX || 
+                    flags & GRN_OBJ_COLUMN_VECTOR ){
+                    flags |= GRN_OBJ_WITH_WEIGHT;
+                }
+                else {
+                    lua_pushnil( L );
+                    lua_pushfstring( L, "withWeight option should be used " \
+                                        "to the INDEX or VECTOR column" );
+                    return 2;
+                }
+            }
+            
+            // withSection flag
+            if( lstate_toptboolean( L, "withSection", 0 ) )
+            {
+                if( flags & GRN_OBJ_COLUMN_INDEX ){
+                    flags |= GRN_OBJ_WITH_SECTION;
+                }
+                else {
+                    lua_pushnil( L );
+                    lua_pushfstring( L, "withSection option should be used " \
+                                        "to the INDEX column" );
+                    return 2;
+                }
+            }
+
+            // withPosition flag
+            if( lstate_toptboolean( L, "withPosition", 0 ) )
+            {
+                if( flags & GRN_OBJ_COLUMN_INDEX ){
+                    flags |= GRN_OBJ_WITH_POSITION;
+                }
+                else {
+                    lua_pushnil( L );
+                    lua_pushfstring( L, "withPosition option should be used " \
+                                        "to the INDEX column" );
+                    return 2;
+                }
+            }
+        }
+
+        // create column metatable
+        if( ( c = lua_newuserdata( L, sizeof( lgrn_col_t ) ) ) )
+        {
+            // create table
+            if( ( col = grn_column_create( ctx, t->tbl, name, 
+                                           (unsigned int)len, path, 
+                                           flags, vtype ) ) )
+            {
+                lstate_setmetatable( L, GROONGA_COLUMN_MT );
+                // retain references
+                lgrn_col_init( c, t->g, col, lstate_refat( L, 1 ) );
+                
+                return 1;
+            }
+            
+            // got error
+            lua_pushnil( L );
+            lua_pushstring( L, ctx->errbuf );
+        }
+        // nomem error
+        else {
+            lua_pushnil( L );
+            lua_pushstring( L, strerror( errno ) );
+        }
+    
+        return 2;
+    }
+}
+
+
 // MARK: table API
 static int name_lua( lua_State *L )
 {
@@ -383,6 +542,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L )
         { "normalize", normalize_lua },
         { "column", column_lua },
         { "columns", columns_lua },
+        { "columnCreate", column_create_lua },
         { NULL, NULL }
     };
     
