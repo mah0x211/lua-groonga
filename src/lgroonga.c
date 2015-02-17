@@ -142,6 +142,7 @@ static int tables_lua( lua_State *L )
         lua_pushnil( L );
     }
     else {
+        // upvalues: g, it, ref of g
         lua_pushinteger( L, lstate_refat( L, 1 ) );
         lua_pushcclosure( L, tables_next_lua, 3 );
     }
