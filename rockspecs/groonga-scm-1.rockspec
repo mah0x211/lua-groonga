@@ -24,6 +24,7 @@ build = {
         groonga = {
             sources = {
                 "src/lgroonga.c",
+                "src/constants.c",
                 "src/table.c",
                 "src/column.c"
             },

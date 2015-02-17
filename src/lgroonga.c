@@ -32,6 +32,7 @@
 
 #define LGRN_ENODB  "database has been removed"
 
+
 // MARK: table API
 static int table_lua( lua_State *L )
 {
@@ -491,6 +492,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     // create metatable
     lgrn_register_mt( L, MODULE_MT, mmethods, methods );
     // register related module
+    luaopen_groonga_constants( L );
     luaopen_groonga_table( L );
     luaopen_groonga_column( L );
     

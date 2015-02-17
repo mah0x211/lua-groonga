@@ -81,6 +81,13 @@
 }while(0)
 
 
+#define lstate_str2arr(L,i,v) do{ \
+    lua_pushinteger(L,i); \
+    lua_pushstring(L,v); \
+    lua_rawset(L,-3); \
+}while(0)
+
+
 #define lstate_argerror( L, arg, ... ) do{ \
     char _msg[255]; \
     snprintf( _msg, 255, __VA_ARGS__ ); \
@@ -246,8 +253,20 @@ static inline int lstate_eachi( lstate_iter_t *it )
 
 // MARK: prototypes
 LUALIB_API int luaopen_groonga( lua_State *L );
+LUALIB_API int luaopen_groonga_constants( lua_State *L );
 LUALIB_API int luaopen_groonga_table( lua_State *L );
 LUALIB_API int luaopen_groonga_column( lua_State *L );
+
+// get constants value by name
+int lgrn_n2i_data( lua_State *L, const char *name );
+int lgrn_n2i_table( lua_State *L, const char *name );
+int lgrn_n2i_column( lua_State *L, const char *name );
+int lgrn_n2i_compress( lua_State *L, const char *name );
+// get name by constants value
+const char *lgrn_i2n_data( lua_State *L, int id, size_t *len );
+const char *lgrn_i2n_table( lua_State *L, int id, size_t *len );
+const char *lgrn_i2n_column( lua_State *L, int id, size_t *len );
+const char *lgrn_i2n_compress( lua_State *L, int id, size_t *len );
 
 
 // MARK: helper API
