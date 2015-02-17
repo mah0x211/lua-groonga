@@ -192,7 +192,7 @@ static int table_create_lua( lua_State *L )
         // check arguments
         if( lua_gettop( L ) > 1 )
         {
-            lua_Integer id;
+            int id;
             
             lua_settop( L, 2 );
             luaL_checktype( L, 2, LUA_TTABLE );
@@ -200,16 +200,35 @@ static int table_create_lua( lua_State *L )
             // path
             path = lstate_toptstring( L, "path", NULL );
             
+            // type
+            name = lstate_toptstring( L, "type", NULL );
+            if( name )
+            {
+                id = lgrn_n2i_table( L, name );
+                if( id == -1 ){
+                    return luaL_argerror( L, 2, "invalid type value" );
+                }
+                flags |= id;
+            }
+            
             // keyType
-            id = lstate_toptinteger( L, "keyType", -1 );
-            if( id > -1 && !( ktype = grn_ctx_at( ctx, id ) ) ){
-                return luaL_argerror( L, 2, "invalid keyType value" );
+            name = lstate_toptstring( L, "keyType", NULL );
+            if( name )
+            {
+                id = lgrn_n2i_data( L, name );
+                if( id == -1 || !( ktype = grn_ctx_at( ctx, id ) ) ){
+                    return luaL_argerror( L, 2, "invalid keyType value" );
+                }
             }
             
             // valType
-            id = lstate_toptinteger( L, "valType", -1 );
-            if( id > -1 && !( vtype = grn_ctx_at( ctx, id ) ) ){
-                return luaL_argerror( L, 2, "invalid valType value" );
+            name = lstate_toptstring( L, "valType", NULL );
+            if( name )
+            {
+                id = lgrn_n2i_data( L, name );
+                if( id == -1 || !( vtype = grn_ctx_at( ctx, id ) ) ){
+                    return luaL_argerror( L, 2, "invalid valType value" );
+                }
             }
             
             // name
@@ -221,40 +240,18 @@ static int table_create_lua( lua_State *L )
                 return 2;
             }
             // set persistent flag automatically if name is not null
-            else if( len ){
+            else if( len || lstate_toptboolean( L, "persistent", 0 ) ){
                 flags |= GRN_OBJ_PERSISTENT;
             }
             
-            // flags
-            if( lstate_tchecktype( L, "flags", LUA_TTABLE, 1 ) == LUA_TTABLE )
-            {
-                int type = 0;
-                lua_Number val = 0;
-                lstate_iter_t it;
-                
-                lstate_iter_init( &it, L, -1 );
-                while( ( type = lstate_eachi( &it ) ) != LUA_TNIL )
-                {
-                    // invalid value type
-                    if( type != LUA_TNUMBER ){
-                        lstate_argerror( L, 2, 
-                            "flags#%ld = unsigned number expected, got %s",
-                            it.idx, lua_typename( L, type )
-                        );
-                    }
-                    val = lua_tonumber( L, -1 );
-                    if( !LUANUM_ISUINT( val ) ){
-                        lstate_argerror( L, 2, 
-                            "flags#%ld = unsigned number expected, got %f", 
-                            it.idx, val
-                        );
-                    }
-                    // set flag
-                    flags |= (grn_obj_flags)val;
-                }
-                lstate_iter_dispose( &it );
-                // remove flags table
-                lua_pop( L, 1 );
+            // withSIS flag
+            if( lstate_toptboolean( L, "withSIS", 0 ) ){
+                flags |= GRN_OBJ_KEY_WITH_SIS;
+            }
+            
+            // normalize flag
+            if( lstate_toptboolean( L, "normalize", 0 ) ){
+                flags |= GRN_OBJ_KEY_NORMALIZE;
             }
         }
 
@@ -426,6 +423,8 @@ static int version_lua( lua_State *L )
 }
 
 
+// MARK: globals
+
 // finalizing groonga library
 static int finalize_lua( lua_State *L )
 {
@@ -498,57 +497,6 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     
     // create module table
     lgrn_register_fn( L, funcs );
-    
-    //
-    // TODO: flag constants value type should change to string,
-    //       and these real flag values maintains in module private memory 
-    //       space as hash table.
-    //       that hash table use to lookup a real flag value by flag string as 
-    //       hash key. this architecture might be improving the usability and 
-    //       understandability.
-    //
-    // constants
-    lstate_int2tbl( L, "PERSISTENT", GRN_OBJ_PERSISTENT );
-    // table flags
-    lstate_int2tbl( L, "TABLE_NO_KEY", GRN_OBJ_TABLE_NO_KEY );
-    lstate_int2tbl( L, "TABLE_HASH_KEY", GRN_OBJ_TABLE_HASH_KEY );
-    lstate_int2tbl( L, "TABLE_PAT_KEY", GRN_OBJ_TABLE_PAT_KEY );
-    lstate_int2tbl( L, "TABLE_DAT_KEY", GRN_OBJ_TABLE_DAT_KEY );
-    // key flags
-    lstate_int2tbl( L, "KEY_NORMALIZE", GRN_OBJ_KEY_NORMALIZE );
-    lstate_int2tbl( L, "KEY_WITH_SIS", GRN_OBJ_KEY_WITH_SIS );
-    // column flags
-    lstate_int2tbl( L, "COLUMN_SCALAR", GRN_OBJ_COLUMN_SCALAR );
-    lstate_int2tbl( L, "COLUMN_VECTOR", GRN_OBJ_COLUMN_VECTOR );
-    lstate_int2tbl( L, "COLUMN_INDEX", GRN_OBJ_COLUMN_INDEX );
-    // compress flags
-    lstate_int2tbl( L, "COMPRESS_NONE", GRN_OBJ_COMPRESS_NONE );
-    lstate_int2tbl( L, "COMPRESS_ZLIB", GRN_OBJ_COMPRESS_ZLIB );
-    lstate_int2tbl( L, "COMPRESS_LZ4", GRN_OBJ_COMPRESS_LZ4 );
-    // with flags
-    lstate_int2tbl( L, "WITH_SECTION", GRN_OBJ_WITH_SECTION );
-    lstate_int2tbl( L, "WITH_WEIGHT", GRN_OBJ_WITH_WEIGHT );
-    lstate_int2tbl( L, "WITH_POSITION", GRN_OBJ_WITH_POSITION );
-    // data type
-    lstate_int2tbl( L, "VOID", GRN_DB_VOID );
-    lstate_int2tbl( L, "DB", GRN_DB_DB );
-    lstate_int2tbl( L, "OBJECT", GRN_DB_OBJECT );
-    lstate_int2tbl( L, "BOOL", GRN_DB_BOOL );
-    lstate_int2tbl( L, "INT8", GRN_DB_INT8 );
-    lstate_int2tbl( L, "UINT8", GRN_DB_UINT8 );
-    lstate_int2tbl( L, "INT16", GRN_DB_INT16 );
-    lstate_int2tbl( L, "UINT16", GRN_DB_UINT16 );
-    lstate_int2tbl( L, "INT32", GRN_DB_INT32 );
-    lstate_int2tbl( L, "UINT32", GRN_DB_UINT32 );
-    lstate_int2tbl( L, "INT64", GRN_DB_INT64 );
-    lstate_int2tbl( L, "UINT64", GRN_DB_UINT64 );
-    lstate_int2tbl( L, "FLOAT", GRN_DB_FLOAT );
-    lstate_int2tbl( L, "TIME", GRN_DB_TIME );
-    lstate_int2tbl( L, "SHORT_TEXT", GRN_DB_SHORT_TEXT );
-    lstate_int2tbl( L, "TEXT", GRN_DB_TEXT );
-    lstate_int2tbl( L, "LONG_TEXT", GRN_DB_LONG_TEXT );
-    lstate_int2tbl( L, "TOKYO_GEO_POINT", GRN_DB_TOKYO_GEO_POINT );
-    lstate_int2tbl( L, "WGS84_GEO_POINT", GRN_DB_WGS84_GEO_POINT );
 
     return 1;
 }
