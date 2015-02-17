@@ -32,6 +32,50 @@
 
 #define LGRN_ENOTABLE  "table has been removed"
 
+
+// MARK: column API
+
+static int column_lua( lua_State *L )
+{
+    lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    
+    if( !t->tbl ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        return 2;
+    }
+    else
+    {
+        size_t len = 0;
+        const char *name = luaL_checklstring( L, 2, &len );
+        grn_ctx *ctx = lgrn_get_ctx( t->g );
+        lgrn_col_t *c = NULL;
+        grn_obj *col = ( len > GRN_TABLE_MAX_KEY_SIZE ) ? NULL :
+                        grn_obj_column( ctx, t->tbl, name, len );
+        
+        if( !col ){
+            lua_pushnil( L );
+            return 1;
+        }
+        // alloc lgrn_col_t
+        else if( ( c = lua_newuserdata( L, sizeof( lgrn_col_t ) ) ) ){
+            lstate_setmetatable( L, GROONGA_COLUMN_MT );
+            // retain references
+            c->ref_t = lstate_refat( L, 1 );
+            c->g = t->g;
+            c->col = col;
+            c->removed = 0;
+            return 1;
+        }
+        
+        // nomem error
+        lua_pushnil( L );
+        lua_pushstring( L, strerror( errno ) );
+        
+        return 2;
+    }
+}
+
 static int name_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
@@ -224,6 +268,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L )
         { "keyType", key_type_lua },
         { "valType", val_type_lua },
         { "persistent", persistent_lua },
+        { "column", column_lua },
         { NULL, NULL }
     };
     
