@@ -67,6 +67,7 @@ static int column_lua( lua_State *L )
         }
         
         // nomem error
+        grn_obj_unlink( ctx, col );
         lua_pushnil( L );
         lua_pushstring( L, strerror( errno ) );
         
