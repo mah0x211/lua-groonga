@@ -136,16 +136,25 @@ static int tables_next_lua( lua_State *L )
 static int tables_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    grn_ctx *ctx = lgrn_get_ctx( g );
     lgrn_iter_t *it = lua_newuserdata( L, sizeof( lgrn_iter_t ) );
     
-    if( !it || lgrn_tbl_iter_init( it, lgrn_get_ctx( g ) ) != GRN_SUCCESS ){
+    // nomem
+    if( !it ){
         lua_pushnil( L );
+        lua_pushstring( L, strerror( errno ) );
+        return 2;
     }
-    else {
-        // upvalues: g, it, ref of g
-        lua_pushinteger( L, lstate_refat( L, 1 ) );
-        lua_pushcclosure( L, tables_next_lua, 3 );
+    // groonga error
+    else if( lgrn_tbl_iter_init( it, ctx ) != GRN_SUCCESS ){
+        lua_pushnil( L );
+        lua_pushstring( L, ctx->errbuf );
+        return 2;
     }
+    
+    // upvalues: g, it, ref of g
+    lua_pushinteger( L, lstate_refat( L, 1 ) );
+    lua_pushcclosure( L, tables_next_lua, 3 );
     
     return 1;
 }
