@@ -117,6 +117,34 @@ static int persistent_lua( lua_State *L )
 }
 
 
+static int with_weight_lua( lua_State *L )
+{
+    lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    
+    if( !c->col ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOCOLUMN );
+        return 2;
+    }
+    else
+    {
+        grn_obj_flags flags = c->col->header.flags;
+        
+        switch( c->col->header.flags & GRN_OBJ_COLUMN_TYPE_MASK ){
+            case GRN_OBJ_COLUMN_VECTOR:
+            case GRN_OBJ_COLUMN_INDEX:
+                lua_pushboolean( L, flags & GRN_OBJ_WITH_WEIGHT );
+            break;
+            
+            default:
+                lua_pushboolean( L, 0 );
+        }
+        
+        return 1;
+    }
+}
+
+
 static int tostring_lua( lua_State *L )
 {
     return lgrn_tostring( L, MODULE_MT );
@@ -155,6 +183,7 @@ LUALIB_API int luaopen_groonga_column( lua_State *L )
         { "path", path_lua },
         { "valType", val_type_lua },
         { "persistent", persistent_lua },
+        { "withWeight", with_weight_lua },
         { NULL, NULL }
     };
     
