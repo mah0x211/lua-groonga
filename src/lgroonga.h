@@ -46,7 +46,7 @@
 #define LUANUM_ISUINT(val)  (!signbit( val ) && !LUANUM_ISDBL( val ))
 
 
-#define lstate_setmetatable(L,tname) do { \
+#define lstate_setmetatable(L,tname) do{ \
     luaL_getmetatable( L, tname ); \
     lua_setmetatable( L, -2 ); \
 }while(0)
@@ -260,10 +260,10 @@ typedef struct {
 } lgrn_tbl_t;
 
 // initialize lgrn_tbl_t
-#define lgrn_tbl_init( t, g, tbl, ref ) do { \
+#define lgrn_tbl_init( t, grn, obj, ref ) do{ \
     (t)->ref_g = ref; \
-    (t)->g = lgrn_retain( g ); \
-    (t)->tbl = tbl; \
+    (t)->g = lgrn_retain( grn ); \
+    (t)->tbl = obj; \
     (t)->removed = 0; \
 }while(0)
 
@@ -274,6 +274,14 @@ typedef struct {
     uint8_t removed;
     int ref_t;
 } lgrn_col_t;
+
+// initialize lgrn_col_t
+#define lgrn_col_init( c, grn, obj, ref ) do{ \
+    (c)->ref_t = ref; \
+    (c)->g = grn; \
+    (c)->col = obj; \
+    (c)->removed = 0; \
+}while(0)
 
 
 // MARK: prototypes

@@ -61,10 +61,8 @@ static int column_lua( lua_State *L )
         else if( ( c = lua_newuserdata( L, sizeof( lgrn_col_t ) ) ) ){
             lstate_setmetatable( L, GROONGA_COLUMN_MT );
             // retain references
-            c->ref_t = lstate_refat( L, 1 );
-            c->g = t->g;
-            c->col = col;
-            c->removed = 0;
+            lgrn_col_init( c, t->g, col, lstate_refat( L, 1 ) );
+            
             return 1;
         }
         
