@@ -118,6 +118,7 @@ static int tables_next_lua( lua_State *L )
             }
             // nomem error
             else {
+                grn_obj_unlink( it->ctx, tbl );
                 lstate_unref( L, ref );
                 lua_pushnil( L );
                 lua_pushstring( L, strerror( errno ) );
