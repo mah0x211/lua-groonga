@@ -1,8 +1,7 @@
 local groonga = require('groonga');
-local unpack = table.unpack or unpack;
 local path = './db/testdb';
 local g = groonga.new( path );
-local tbls = {};
+local cols = {};
 local nelts = 0;
 local t, name;
 
@@ -30,14 +29,23 @@ for i = 1, 10 do
         -- 'WITH_POSITION'
         withPosition = false
     }) );
-    tbls[name] = true;
+    cols[name] = true;
     nelts = nelts + 1;
 end
 
--- getting all column
+
+-- getting all column name
 for name, col in t:columns() do
-    if tbls[name] then
-        tbls[name] = nil;
+    ifNil( cols[name] );
+    ifNotNil( col );
+end
+
+-- getting all column name with column obj
+for name, col in t:columns(true) do
+    ifNil( cols[name] );
+    ifNil( col );
+    if cols[name] then
+        cols[name] = nil;
         nelts = nelts - 1;
     end
 end
