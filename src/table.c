@@ -83,7 +83,12 @@ static int columns_next_lua( lua_State *L )
     int ref = lua_tointeger( L, lua_upvalueindex( 3 ) );
     int rv = 0;
     
-    if( t->tbl )
+    if( !t->tbl ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        rv = 2;
+    }
+    else
     {
         lgrn_col_t *c = NULL;
         grn_obj *col = NULL;
