@@ -104,24 +104,17 @@ static int tables_next_lua( lua_State *L )
         
         while( lgrn_tbl_iter_next( it, &tbl ) == GRN_SUCCESS )
         {
+            // get table name
+            lgrn_get_objname( &oname, it->ctx, tbl );
+            lua_pushlstring( L, oname.name, (size_t)oname.len );
+            
             // create table metatable
-            t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) );
-            if( t )
-            {
+            if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
                 lstate_setmetatable( L, GROONGA_TABLE_MT );
                 // push db pointer
                 lstate_pushref( L, ref );
                 // retain references
                 lgrn_tbl_init( t, g, tbl, lstate_ref( L ) );
-                
-                // get table name
-                if( lgrn_get_objname( &oname, it->ctx, tbl ) ){
-                    lua_pushlstring( L, oname.name, (size_t)oname.len );
-                }
-                // temporary table has no name
-                else {
-                    lua_pushnil( L );
-                }
                 
                 return 2;
             }

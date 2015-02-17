@@ -97,20 +97,19 @@ static int columns_next_lua( lua_State *L )
          
         while( ( rc = lgrn_col_iter_next( it, &col ) ) == GRN_SUCCESS )
         {
+            // push column name
+            oname.len = grn_column_name( it->ctx, col, oname.name, 
+                                         GRN_TABLE_MAX_KEY_SIZE );
+            lua_pushlstring( L, oname.name, (size_t)oname.len );
+            
             // create table metatable
-            c = lua_newuserdata( L, sizeof( lgrn_col_t ) );
-            if( c )
-            {
+            if( ( c = lua_newuserdata( L, sizeof( lgrn_col_t ) ) ) ){
                 lstate_setmetatable( L, GROONGA_COLUMN_MT );
                 // push tbl pointer
                 lstate_pushref( L, ref );
                 // retain references
                 lgrn_col_init( c, t->g, col, lstate_ref( L ) );
                 
-                // push column name
-                oname.len = grn_column_name( it->ctx, col, oname.name, 
-                                             GRN_TABLE_MAX_KEY_SIZE );
-                lua_pushlstring( L, oname.name, (size_t)oname.len );
                 return 2;
             }
             
