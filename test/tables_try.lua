@@ -21,8 +21,10 @@ end
 
 -- getting all table
 for tbl, name in g:tables() do
-    tbls[name] = nil;
-    nelts = nelts - 1;
+    if tbls[name] then
+        tbls[name] = nil;
+        nelts = nelts - 1;
+    end
 end
 ifNotEqual( nelts, 0 );
 
