@@ -16,38 +16,35 @@ for _, spec in ipairs({
     -- persistent table
     {
         name = 'test',
-        keyType = groonga.UINT32,
-        valType = groonga.INT32,
-        flags = {
-            groonga.TABLE_HASH_KEY
-        }
+        path = './db/tbl',
+        keyType = 'UINT32',
+        valType = 'INT32',
+        -- 'PAT_KEY' | 'DAT_KEY' | 'HASH_KEY' | 'NO_KEY'
+        type = 'HASH_KEY',
+        -- 'PERSISTENT'
+        persistent = true,
+        -- 'KEY_WITH_SIS'
+        withSIS = false,
+        -- 'KEY_NORMALIZE'
+        normalize = false,
     },
     {
         name = 'test',
-        keyType = groonga.SHORT_TEXT,
-        flags = {
-            groonga.TABLE_PAT_KEY
-        }
+        keyType = 'SHORT_TEXT',
+        type = 'PAT_KEY'
     },
     {
         name = 'test',
-        flags = {
-            groonga.TABLE_DAT_KEY
-        }
+        type = 'DAT_KEY'
     },
     {
         name = 'test',
-        flags = {
-            groonga.TABLE_NO_KEY
-        }
+        type = 'NO_KEY'
     }
 }) do
     t = ifNil( g:tableCreate( spec ) );
     -- verify spec
     for k, v in pairs( spec ) do
-        if k == 'flags' and spec.name then
-            v[#v+1] = groonga.PERSISTENT;
-        end
         ifNotEqual( t[k]( t ), v );
     end
     -- force remove
