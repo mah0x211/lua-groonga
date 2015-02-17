@@ -183,6 +183,18 @@ static inline lua_Integer lstate_toptinteger( lua_State *L, const char *k,
 }
 
 
+static inline int lstate_toptboolean( lua_State *L, const char *k, int defval )
+{
+    if( lstate_tchecktype( L, k, LUA_TBOOLEAN, 1 ) == LUA_TBOOLEAN ){
+        int v = lua_toboolean( L, -1 );
+        lua_pop( L, 1 );
+        return v;
+    }
+    
+    return defval;
+}
+
+
 // iterator
 typedef struct {
     lua_State *L;
