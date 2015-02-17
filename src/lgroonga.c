@@ -90,7 +90,12 @@ static int tables_next_lua( lua_State *L )
     int ref = lua_tointeger( L, lua_upvalueindex( 3 ) );
     int rv = 0;
     
-    if( lgrn_get_db( g ) )
+    if( !lgrn_get_db( g ) ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENODB );
+        rv = 2;
+    }
+    else
     {
         lgrn_tbl_t *t = NULL;
         grn_obj *tbl = NULL;
