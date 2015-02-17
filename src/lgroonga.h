@@ -340,17 +340,14 @@ static inline int lgrn_obj_istbl( grn_obj *obj )
 typedef struct {
     grn_ctx *ctx;
     grn_table_cursor *cur;
-} lgrn_iter_t;
+} lgrn_tbl_iter_t;
 
 
-static inline grn_rc lgrn_iter_init( lgrn_iter_t *it, grn_ctx *ctx, 
-                                     grn_obj *tbl, const void *min, 
-                                     unsigned int min_size, const void *max, 
-                                     unsigned int max_size, int offset, 
-                                     int limit, int flags )
+// init table lookup iterator
+static inline grn_rc lgrn_tbl_iter_init( lgrn_tbl_iter_t *it, grn_ctx *ctx )
 {
-    it->cur = grn_table_cursor_open( ctx, tbl, min, min_size, max, max_size, 
-                                     offset, limit, flags );
+    it->cur = grn_table_cursor_open( ctx, grn_ctx_db( ctx ), NULL, 0, NULL, 0, 
+                                     0, -1, 0 );
     if( it->cur ){
         it->ctx = ctx;
         return GRN_SUCCESS;
@@ -360,19 +357,15 @@ static inline grn_rc lgrn_iter_init( lgrn_iter_t *it, grn_ctx *ctx,
 }
 
 
-static inline grn_rc lgrn_iter_dispose( lgrn_iter_t *it )
+static inline grn_rc lgrn_tbl_iter_dispose( lgrn_tbl_iter_t *it )
 {
     return grn_table_cursor_close( it->ctx, it->cur );
 }
 
 
-// init table lookup iterator.
-#define lgrn_tbl_iter_init( it, ctx ) \
-    lgrn_iter_init( it, ctx, grn_ctx_db( ctx ), NULL, 0, NULL, 0, 0, -1, 0 )
-
 
 // lookup a next registered table of database
-static inline grn_rc lgrn_tbl_iter_next( lgrn_iter_t *it, grn_obj **tbl )
+static inline grn_rc lgrn_tbl_iter_next( lgrn_tbl_iter_t *it, grn_obj **tbl )
 {
     grn_ctx *ctx = it->ctx;
     grn_table_cursor *cur = it->cur;

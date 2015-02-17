@@ -86,7 +86,7 @@ static int table_lua( lua_State *L )
 static int tables_next_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, lua_upvalueindex( 1 ), MODULE_MT );
-    lgrn_iter_t *it = (lgrn_iter_t*)lua_touserdata( L, lua_upvalueindex( 2 ) );
+    lgrn_tbl_iter_t *it = lua_touserdata( L, lua_upvalueindex( 2 ) );
     int ref = lua_tointeger( L, lua_upvalueindex( 3 ) );
     
     if( lgrn_get_db( g ) )
@@ -126,7 +126,7 @@ static int tables_next_lua( lua_State *L )
         }
     }
     
-    lgrn_iter_dispose( it );
+    lgrn_tbl_iter_dispose( it );
     lstate_unref( L, ref );
     
     return 0;
@@ -137,7 +137,7 @@ static int tables_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
     grn_ctx *ctx = lgrn_get_ctx( g );
-    lgrn_iter_t *it = lua_newuserdata( L, sizeof( lgrn_iter_t ) );
+    lgrn_tbl_iter_t *it = lua_newuserdata( L, sizeof( lgrn_tbl_iter_t ) );
     
     // nomem
     if( !it ){
