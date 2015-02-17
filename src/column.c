@@ -75,6 +75,29 @@ static int path_lua( lua_State *L )
 }
 
 
+static int type_lua( lua_State *L )
+{
+    lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    
+    if( !c->col ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOCOLUMN );
+        return 2;
+    }
+    else
+    {
+        size_t len = 0;
+        const char *name = lgrn_i2n_column( L, 
+            c->col->header.flags & GRN_OBJ_COLUMN_TYPE_MASK, &len 
+        );
+        
+        lua_pushlstring( L, name, len );
+        
+        return 1;
+    }
+}
+
+
 static int val_type_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
@@ -237,6 +260,7 @@ LUALIB_API int luaopen_groonga_column( lua_State *L )
     struct luaL_Reg methods[] = {
         { "name", name_lua },
         { "path", path_lua },
+        { "type", type_lua },
         { "valType", val_type_lua },
         { "persistent", persistent_lua },
         { "withWeight", with_weight_lua },
