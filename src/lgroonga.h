@@ -392,6 +392,89 @@ static inline grn_rc lgrn_tbl_iter_next( lgrn_tbl_iter_t *it, grn_obj **tbl )
 }
 
 
+// column lookup iterator
+typedef struct {
+    grn_ctx *ctx;
+    grn_hash_cursor *cur;
+    grn_hash *cols;
+    int ncols;
+} lgrn_col_iter_t;
+
+
+// init iterator
+static grn_rc lgrn_col_iter_init( lgrn_col_iter_t *it, grn_ctx *ctx, 
+                                  grn_obj *tbl )
+{
+    // create container
+    grn_hash *cols = grn_hash_create( ctx, NULL, sizeof( grn_id ), 0, 
+                                      GRN_OBJ_TABLE_HASH_KEY );
+    
+    if( cols )
+    {
+        it->ncols = grn_table_columns( ctx, tbl, NULL, 0, (grn_obj*)cols );
+        it->cur = grn_hash_cursor_open( ctx, cols, NULL, 0, NULL, 0, 0, -1, 0 );
+        if( it->cur ){
+            it->ctx = ctx;
+            it->cols = cols;
+            return GRN_SUCCESS;
+        }
+        
+        grn_hash_close( ctx, cols );
+    }
+    
+    return ctx->rc;
+}
+
+
+static inline grn_rc lgrn_col_iter_dispose( lgrn_col_iter_t *it )
+{
+    grn_hash_cursor_close( it->ctx, it->cur );
+    return grn_hash_close( it->ctx, it->cols );
+}
+
+
+// lookup a next column of table
+static inline grn_rc lgrn_col_iter_next( lgrn_col_iter_t *it, grn_obj **col )
+{
+    grn_ctx *ctx = it->ctx;
+    grn_hash_cursor *cur = it->cur;
+    grn_obj *obj = NULL;
+    grn_id *id = NULL;
+    int rv = 0 ;
+    
+    while( grn_hash_cursor_next( ctx, cur ) != GRN_ID_NIL )
+    {
+        //
+        // ctx: grn_ctx*                    | context
+        // cur: grn_hash_cursor*            | cursor
+        // key: void** or NULL              | key
+        // ksz: unsigned int* or NULL       | key size
+        // val: void** or NULL              | value
+        // ret: int or GRN_INVALID_ARGUMENT | value size
+        //
+        // int grn_hash_cursor_get_key_value( grn_ctx *ctx,
+        //                                    grn_hash_cursor *cur,
+        //                                    void **key, unsigned int *ksz,
+        //                                    void **val );
+        //
+        rv = grn_hash_cursor_get_key_value( ctx, cur, (void**)&id, NULL, NULL );
+        if( rv == GRN_INVALID_ARGUMENT ){
+            return GRN_INVALID_ARGUMENT;
+        }
+        else if( ( obj = grn_ctx_at(ctx, *id ) ) ){
+            *col = obj;
+            return GRN_SUCCESS;
+        }
+        else if( ctx->rc != GRN_SUCCESS ){
+            return ctx->rc;
+        }
+        grn_obj_unlink( ctx, obj );
+    }
+    
+    return GRN_END_OF_DATA;
+}
+
+
 // MARK: database
 typedef struct {
     grn_ctx ctx;

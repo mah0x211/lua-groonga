@@ -75,6 +75,87 @@ static int column_lua( lua_State *L )
     }
 }
 
+
+static int columns_next_lua( lua_State *L )
+{
+    lgrn_tbl_t *t = luaL_checkudata( L, lua_upvalueindex( 1 ), MODULE_MT );
+    lgrn_col_iter_t *it = lua_touserdata( L, lua_upvalueindex( 2 ) );
+    int ref = lua_tointeger( L, lua_upvalueindex( 3 ) );
+    int rv = 0;
+    
+    if( t->tbl )
+    {
+        lgrn_col_t *c = NULL;
+        grn_obj *col = NULL;
+        lgrn_objname_t oname;
+        int rc = 0;
+         
+        while( ( rc = lgrn_col_iter_next( it, &col ) ) == GRN_SUCCESS )
+        {
+            // create table metatable
+            c = lua_newuserdata( L, sizeof( lgrn_col_t ) );
+            if( c )
+            {
+                lstate_setmetatable( L, GROONGA_COLUMN_MT );
+                // push tbl pointer
+                lstate_pushref( L, ref );
+                // retain references
+                lgrn_col_init( c, t->g, col, lstate_ref( L ) );
+                
+                // push column name
+                oname.len = grn_column_name( it->ctx, col, oname.name, 
+                                             GRN_TABLE_MAX_KEY_SIZE );
+                lua_pushlstring( L, oname.name, (size_t)oname.len );
+                return 2;
+            }
+            
+            // nomem error
+            grn_obj_unlink( it->ctx, col );
+            lua_pushnil( L );
+            lua_pushstring( L, strerror( errno ) );
+            rv = 2;
+        }
+        
+        if( rc != GRN_SUCCESS && rc != GRN_END_OF_DATA ){
+            lua_pushnil( L );
+            lua_pushstring( L, strerror( errno ) );
+            rv = 2;
+        }
+    }
+    
+    lgrn_col_iter_dispose( it );
+    lstate_unref( L, ref );
+    
+    return rv;
+}
+
+
+static int columns_lua( lua_State *L )
+{
+    lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    grn_ctx *ctx = lgrn_get_ctx( t->g );
+    lgrn_col_iter_t *it = lua_newuserdata( L, sizeof( lgrn_col_iter_t ) );
+    
+    if( !it ){
+        lua_pushnil( L );
+        lua_pushstring( L, strerror( errno ) );
+        return 2;
+    }
+    else if( lgrn_col_iter_init( it, ctx, t->tbl ) != GRN_SUCCESS ){
+        lua_pushnil( L );
+        lua_pushstring( L, ctx->errbuf );
+        return 2;
+    }
+    
+    // upvalues: t, it, ref of t
+    lua_pushinteger( L, lstate_refat( L, 1 ) );
+    lua_pushcclosure( L, columns_next_lua, 3 );
+    
+    return 1;
+
+}
+
+// MARK: table API
 static int name_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
@@ -268,6 +349,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L )
         { "valType", val_type_lua },
         { "persistent", persistent_lua },
         { "column", column_lua },
+        { "columns", columns_lua },
         { NULL, NULL }
     };
     
