@@ -204,30 +204,26 @@ static int path_lua( lua_State *L )
 }
 
 
-static int flags_lua( lua_State *L )
+static int type_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
-    int idx = 1;
     
     if( !t->tbl ){
         lua_pushnil( L );
         lua_pushstring( L, LGRN_ENOTABLE );
         return 2;
     }
-    
-    lua_newtable( L );
-    lstate_int2arr( L, idx++, t->tbl->header.flags & GRN_OBJ_TABLE_TYPE_MASK );
-    if( t->tbl->header.flags & GRN_OBJ_KEY_WITH_SIS ){
-        lstate_int2arr( L, idx++, GRN_OBJ_KEY_WITH_SIS );
+    else
+    {
+        size_t len = 0;
+        const char *name = lgrn_i2n_table( 
+            L, t->tbl->header.flags & GRN_OBJ_TABLE_TYPE_MASK, &len 
+        );
+        
+        lua_pushlstring( L, name, len );
+        
+        return 1;
     }
-    if( t->tbl->header.flags & GRN_OBJ_KEY_NORMALIZE ){
-        lstate_int2arr( L, idx++, GRN_OBJ_KEY_NORMALIZE );
-    }
-    if( t->tbl->header.flags & GRN_OBJ_PERSISTENT ){
-        lstate_int2arr( L, idx++, GRN_OBJ_PERSISTENT );
-    }
-    
-    return 1;
 }
 
 
@@ -240,43 +236,41 @@ static int key_type_lua( lua_State *L )
         lua_pushstring( L, LGRN_ENOTABLE );
         return 2;
     }
-    else
-    {
-        if( t->tbl->header.domain != GRN_ID_NIL ){
-            lua_pushinteger( L, t->tbl->header.domain );
-        }
-        else {
-            lua_pushnil( L );
-        }
-        
-        return 1;
+    else if( t->tbl->header.domain == GRN_ID_NIL ){
+        lua_pushnil( L );
     }
+    else {
+        size_t len = 0;
+        const char *name = lgrn_i2n_data( L, t->tbl->header.domain, &len );
+        lua_pushlstring( L, name, len );
+    }
+    
+    return 1;
 }
 
 
 static int val_type_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    grn_id id = 0;
     
     if( !t->tbl ){
         lua_pushnil( L );
         lua_pushstring( L, LGRN_ENOTABLE );
         return 2;
     }
-    else
-    {
-        grn_ctx *ctx = lgrn_get_ctx( t->g );
-        grn_id id = grn_obj_get_range( ctx, t->tbl );
-        
-        if( id != GRN_ID_NIL ){
-            lua_pushinteger( L, id );
-        }
-        else {
-            lua_pushnil( L );
-        }
-        
-        return 1;
+    
+    id = grn_obj_get_range( lgrn_get_ctx( t->g ), t->tbl );
+    if( id != GRN_ID_NIL ){
+        size_t len = 0;
+        const char *name = lgrn_i2n_data( L, id, &len );
+        lua_pushlstring( L, name, len );
     }
+    else {
+        lua_pushnil( L );
+    }
+    
+    return 1;
 }
 
 
@@ -292,6 +286,38 @@ static int persistent_lua( lua_State *L )
     
     lua_pushboolean( L, t->tbl->header.flags & GRN_OBJ_PERSISTENT );
 
+    return 1;
+}
+
+
+static int with_sis_lua( lua_State *L )
+{
+    lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    
+    if( !t->tbl ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        return 2;
+    }
+    
+    lua_pushboolean( L, t->tbl->header.flags & GRN_OBJ_KEY_WITH_SIS );
+    
+    return 1;
+}
+
+
+static int normalize_lua( lua_State *L )
+{
+    lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    
+    if( !t->tbl ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        return 2;
+    }
+    
+    lua_pushboolean( L, t->tbl->header.flags & GRN_OBJ_KEY_NORMALIZE );
+    
     return 1;
 }
 
@@ -349,10 +375,12 @@ LUALIB_API int luaopen_groonga_table( lua_State *L )
         { "remove", remove_lua },
         { "name", name_lua },
         { "path", path_lua },
-        { "flags", flags_lua },
+        { "type", type_lua },
         { "keyType", key_type_lua },
         { "valType", val_type_lua },
         { "persistent", persistent_lua },
+        { "withSIS", with_sis_lua },
+        { "normalize", normalize_lua },
         { "column", column_lua },
         { "columns", columns_lua },
         { NULL, NULL }
