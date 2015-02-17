@@ -126,6 +126,29 @@ static int val_type_lua( lua_State *L )
 }
 
 
+static int compress_lua( lua_State *L )
+{
+    lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    grn_id id = 0;
+    
+    if( !c->col ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOCOLUMN );
+        return 2;
+    }
+    else if( ( id = c->col->header.flags & GRN_OBJ_COMPRESS_MASK ) ){
+        size_t len = 0;
+        const char *name = lgrn_i2n_compress( L, id, &len );
+        lua_pushlstring( L, name, len );
+    }
+    else {
+        lua_pushnil( L );
+    }
+    
+    return 1;
+}
+
+
 static int persistent_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
@@ -262,6 +285,7 @@ LUALIB_API int luaopen_groonga_column( lua_State *L )
         { "path", path_lua },
         { "type", type_lua },
         { "valType", val_type_lua },
+        { "compress", compress_lua },
         { "persistent", persistent_lua },
         { "withWeight", with_weight_lua },
         { "withSection", with_section_lua },
