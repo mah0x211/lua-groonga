@@ -90,7 +90,9 @@ static int val_type_lua( lua_State *L )
         grn_id id = grn_obj_get_range( ctx, c->col );
         
         if( id != GRN_ID_NIL ){
-            lua_pushinteger( L, id );
+            size_t len = 0;
+            const char *name = lgrn_i2n_data( L, id, &len );
+            lua_pushlstring( L, name, len );
         }
         else {
             lua_pushnil( L );
