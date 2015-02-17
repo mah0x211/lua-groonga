@@ -1,4 +1,3 @@
-local INSPECT_OPT = { depth = 0 };
 local groonga = require('groonga');
 local unpack = table.unpack or unpack;
 local path = './db/testdb';
@@ -36,7 +35,7 @@ for i = 1, 10 do
 end
 
 -- getting all column
-for col, name in t:columns() do
+for name, col in t:columns() do
     if tbls[name] then
         tbls[name] = nil;
         nelts = nelts - 1;

@@ -20,7 +20,7 @@ for i = 1, 10 do
 end
 
 -- getting all table
-for tbl, name in g:tables() do
+for name, tbl in g:tables() do
     if tbls[name] then
         tbls[name] = nil;
         nelts = nelts - 1;
