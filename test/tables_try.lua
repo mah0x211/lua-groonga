@@ -19,8 +19,16 @@ for i = 1, 10 do
     nelts = nelts + 1;
 end
 
--- getting all table
+-- getting all table name
 for name, tbl in g:tables() do
+    ifNil( tbls[name] );
+    ifNotNil( tbl );
+end
+
+-- getting all table name with table obj
+for name, tbl in g:tables(true) do
+    ifNil( tbls[name] );
+    ifNil( tbl );
     if tbls[name] then
         tbls[name] = nil;
         nelts = nelts - 1;
