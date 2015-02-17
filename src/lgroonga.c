@@ -30,10 +30,93 @@
 
 #define MODULE_MT   GROONGA_MT
 
+#define ITERATOR_MT "groonga.table.iterator"
+
 #define LGRN_ENODB  "database has been removed"
 
 
+// MARK: table iterator
+typedef struct {
+    grn_ctx *ctx;
+    grn_table_cursor *cur;
+} tbl_iter_t;
+
+
+// init table lookup iterator
+static grn_rc tbl_iter_init( tbl_iter_t *it, grn_ctx *ctx )
+{
+    if( ( it->cur = grn_table_cursor_open( ctx, grn_ctx_db( ctx ), NULL, 0, 
+                                           NULL, 0, 0, -1, 0 ) ) ){
+        it->ctx = ctx;
+        return GRN_SUCCESS;
+    }
+    
+    return ctx->rc;
+}
+
+
+static grn_rc tbl_iter_dispose( tbl_iter_t *it )
+{
+    if( it->cur ){
+        grn_rc rc = grn_table_cursor_close( it->ctx, it->cur );
+        it->cur = NULL;
+        return rc;
+    }
+    
+    return GRN_SUCCESS;
+}
+
+
+// lookup a next registered table of database
+static grn_rc tbl_iter_next( tbl_iter_t *it, grn_obj **tbl )
+{
+    grn_table_cursor *cur = it->cur;
+    grn_obj *obj = NULL;
+    grn_id id;
+    
+    while( ( id = grn_table_cursor_next( it->ctx, cur ) ) != GRN_ID_NIL )
+    {
+        if( ( obj = grn_ctx_at( it->ctx, id ) ) )
+        {
+            // return table object
+            if( lgrn_obj_istbl( obj ) ){
+                *tbl = obj;
+                return GRN_SUCCESS;
+            }
+            grn_obj_unlink( it->ctx, obj );
+        }
+        else if( it->ctx->rc != GRN_SUCCESS ){
+            return it->ctx->rc;
+        }
+    }
+    
+    return GRN_END_OF_DATA;
+}
+
+
+static int tbl_iter_gc( lua_State *L )
+{
+    tbl_iter_t *it = lua_touserdata( L, 1 );
+
+    tbl_iter_dispose( it );
+    
+    return 0;
+}
+
+
+static void tbl_iter_init_mt( lua_State *L )
+{
+    struct luaL_Reg mmethods[] = {
+        { "__gc", tbl_iter_gc },
+        { NULL, NULL }
+    };
+    
+    lgrn_register_mt( L, ITERATOR_MT, mmethods, NULL );
+}
+
+
 // MARK: table API
+
 static int table_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
@@ -87,8 +170,8 @@ static int table_lua( lua_State *L )
 static int tables_next_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, lua_upvalueindex( 1 ), MODULE_MT );
-    lgrn_tbl_iter_t *it = lua_touserdata( L, lua_upvalueindex( 2 ) );
-    int ref = lua_tointeger( L, lua_upvalueindex( 3 ) );
+    int with_obj = lua_toboolean( L, lua_upvalueindex( 2 ) );
+    tbl_iter_t *it = lua_touserdata( L, lua_upvalueindex( 3 ) );
     int rv = 0;
     
     if( !lgrn_get_db( g ) ){
@@ -102,19 +185,22 @@ static int tables_next_lua( lua_State *L )
         grn_obj *tbl = NULL;
         lgrn_objname_t oname;
         
-        while( lgrn_tbl_iter_next( it, &tbl ) == GRN_SUCCESS )
+        while( tbl_iter_next( it, &tbl ) == GRN_SUCCESS )
         {
             // get table name
             lgrn_get_objname( &oname, it->ctx, tbl );
             lua_pushlstring( L, oname.name, (size_t)oname.len );
             
+            // return name
+            if( !with_obj ){
+                return 1;
+            }
             // create table metatable
-            if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
+            else if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
                 lstate_setmetatable( L, GROONGA_TABLE_MT );
-                // push db pointer
-                lstate_pushref( L, ref );
-                // retain references
-                lgrn_tbl_init( t, g, tbl, lstate_ref( L ) );
+                lgrn_tbl_init( 
+                    t, g, tbl, lstate_refat( L, lua_upvalueindex( 1 ) ) 
+                );
                 
                 return 2;
             }
@@ -126,9 +212,8 @@ static int tables_next_lua( lua_State *L )
             rv = 2;
         }
     }
-
-    lgrn_tbl_iter_dispose( it );
-    lstate_unref( L, ref );
+    
+    tbl_iter_dispose( it );
     
     return rv;
 }
@@ -137,27 +222,46 @@ static int tables_next_lua( lua_State *L )
 static int tables_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
-    grn_ctx *ctx = lgrn_get_ctx( g );
-    lgrn_tbl_iter_t *it = lua_newuserdata( L, sizeof( lgrn_tbl_iter_t ) );
     
-    // nomem
-    if( !it ){
+    if( !lgrn_get_db( g ) ){
         lua_pushnil( L );
-        lua_pushstring( L, strerror( errno ) );
+        lua_pushstring( L, LGRN_ENODB );
         return 2;
     }
-    // groonga error
-    else if( lgrn_tbl_iter_init( it, ctx ) != GRN_SUCCESS ){
-        lua_pushnil( L );
-        lua_pushstring( L, ctx->errbuf );
-        return 2;
+    else
+    {
+        grn_ctx *ctx = lgrn_get_ctx( g );
+        int with_obj = 0;
+        tbl_iter_t *it = NULL;
+        
+        // check argument
+        if( lua_type( L, 2 ) == LUA_TBOOLEAN ){
+            with_obj = lua_toboolean( L, 2 );
+        }
+        // remove unused stack items
+        lua_settop( L, 1 );
+        lua_pushboolean( L, with_obj );
+        
+        // nomem
+        if( !( it = lua_newuserdata( L, sizeof( tbl_iter_t ) ) ) ){
+            lua_pushnil( L );
+            lua_pushstring( L, strerror( errno ) );
+            return 2;
+        }
+        // groonga error
+        else if( tbl_iter_init( it, ctx ) != GRN_SUCCESS ){
+            lua_pushnil( L );
+            lua_pushstring( L, ctx->errbuf );
+            return 2;
+        }
+        
+        // set metatable
+        lstate_setmetatable( L, ITERATOR_MT );
+        // upvalues: g, with_obj, it
+        lua_pushcclosure( L, tables_next_lua, 3 );
+        
+        return 1;
     }
-    
-    // upvalues: g, it, ref of g
-    lua_pushinteger( L, lstate_refat( L, 1 ) );
-    lua_pushcclosure( L, tables_next_lua, 3 );
-    
-    return 1;
 }
 
 
@@ -253,8 +357,7 @@ static int table_create_lua( lua_State *L )
         {
             // create table
             if( ( tbl = grn_table_create( ctx, name, (unsigned int)len, path, 
-                                          flags, ktype, vtype ) ) )
-            {
+                                          flags, ktype, vtype ) ) ){
                 lstate_setmetatable( L, GROONGA_TABLE_MT );
                 // init fields
                 lgrn_tbl_init( t, g, tbl, lstate_refat( L, 1 ) );
@@ -478,9 +581,9 @@ LUALIB_API int luaopen_groonga( lua_State *L )
         { NULL, NULL }
     };
     
-    
     // initialize groonga global variables
     global_init( L );
+    tbl_iter_init_mt( L );
     // create metatable
     lgrn_register_mt( L, MODULE_MT, mmethods, methods );
     // register related module

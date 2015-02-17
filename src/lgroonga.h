@@ -305,63 +305,6 @@ static inline int lgrn_obj_istbl( grn_obj *obj )
 }
 
 
-
-// MARK: iterator
-typedef struct {
-    grn_ctx *ctx;
-    grn_table_cursor *cur;
-} lgrn_tbl_iter_t;
-
-
-// init table lookup iterator
-static inline grn_rc lgrn_tbl_iter_init( lgrn_tbl_iter_t *it, grn_ctx *ctx )
-{
-    it->cur = grn_table_cursor_open( ctx, grn_ctx_db( ctx ), NULL, 0, NULL, 0, 
-                                     0, -1, 0 );
-    if( it->cur ){
-        it->ctx = ctx;
-        return GRN_SUCCESS;
-    }
-    
-    return ctx->rc;
-}
-
-
-static inline grn_rc lgrn_tbl_iter_dispose( lgrn_tbl_iter_t *it )
-{
-    return grn_table_cursor_close( it->ctx, it->cur );
-}
-
-
-
-// lookup a next registered table of database
-static inline grn_rc lgrn_tbl_iter_next( lgrn_tbl_iter_t *it, grn_obj **tbl )
-{
-    grn_ctx *ctx = it->ctx;
-    grn_table_cursor *cur = it->cur;
-    grn_obj *obj = NULL;
-    grn_id id;
-    
-    while( ( id = grn_table_cursor_next( ctx, cur ) ) != GRN_ID_NIL )
-    {
-        if( ( obj = grn_ctx_at( ctx, id ) ) )
-        {
-            // return table object
-            if( lgrn_obj_istbl( obj ) ){
-                *tbl = obj;
-                return GRN_SUCCESS;
-            }
-            grn_obj_unlink( ctx, obj );
-        }
-        else if( ctx->rc != GRN_SUCCESS ){
-            return ctx->rc;
-        }
-    }
-    
-    return GRN_END_OF_DATA;
-}
-
-
 // column lookup iterator
 typedef struct {
     grn_ctx *ctx;
