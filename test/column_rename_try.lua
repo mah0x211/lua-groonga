@@ -28,7 +28,7 @@ c = ifNil( t:columnCreate({
     withPosition = false
 }) );
 -- rename
-ifNotNil( c:rename( name .. 'change' ) );
+ifNotTrue( c:rename( name .. 'change' ) );
 ifNotEqual( c:name(), name .. 'change' );
 
 g:remove();
