@@ -617,6 +617,36 @@ static int remove_lua( lua_State *L )
 }
 
 
+static int rename_lua( lua_State *L )
+{
+    lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    grn_ctx *ctx = NULL;
+    size_t len = 0;
+    const char *name = NULL;
+    
+    CHECK_EXISTS_EX( L, t, CHECK_RET_FALSE );
+    ctx = lgrn_get_ctx( t->g );
+    name = luaL_checklstring( L, 2, &len );
+    
+    if( len > GRN_TABLE_MAX_KEY_SIZE ){
+        lua_pushboolean( L, 0 );
+        lua_pushfstring( L, "column name length must be less than %u",
+                         GRN_TABLE_MAX_KEY_SIZE );
+        return 1;
+    }
+    else if( grn_table_rename( ctx, t->tbl, name, 
+                               (unsigned int)len ) != GRN_SUCCESS ){
+        lua_pushboolean( L, 0 );
+        lua_pushfstring( L, ctx->errbuf );
+        return 1;
+    }
+    
+    lua_pushboolean( L, 1 );
+    
+    return 1;
+}
+
+
 static int tostring_lua( lua_State *L )
 {
     return lgrn_tostring( L, MODULE_MT );
@@ -645,6 +675,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L )
         { NULL, NULL }
     };
     struct luaL_Reg methods[] = {
+        { "rename", rename_lua },
         { "remove", remove_lua },
         { "db", db_lua },
         { "name", name_lua },
