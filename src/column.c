@@ -30,7 +30,32 @@
 
 #define MODULE_MT   GROONGA_COLUMN_MT
 
-#define LGRN_ENOCOLUMN  "column has been removed"
+
+// helper macrocs
+
+#define CHECK_RET_NIL       lua_pushnil( L )
+#define CHECK_RET_FALSE     lua_pushboolean( L, 0 )
+
+#define CHECK_EXISTS_EX( L, c, CHECK_RET ) do{ \
+    if( (c)->removed ){ \
+        CHECK_RET; \
+        lua_pushstring( L, LGRN_ENOCOLUMN ); \
+        return 2; \
+    } \
+    else if( (c)->t->removed ){ \
+        CHECK_RET; \
+        lua_pushstring( L, LGRN_ENOTABLE ); \
+        return 2; \
+    } \
+    else if( (c)->t->g->removed ){ \
+        CHECK_RET; \
+        lua_pushstring( L, LGRN_ENODB ); \
+        return 2; \
+    } \
+}while(0)
+
+#define CHECK_EXISTS( L, c ) \
+    CHECK_EXISTS_EX( L, c, CHECK_RET_NIL )
 
 
 // MARK: column API
@@ -40,12 +65,7 @@ static int name_lua( lua_State *L )
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
     lgrn_objname_t oname;
     
-    if( !c->col ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
-    }
-    
+    CHECK_EXISTS( L, c );
     oname.len = grn_column_name( lgrn_get_ctx( c->t->g ), c->col, oname.name, 
                                  GRN_TABLE_MAX_KEY_SIZE );
     lua_pushlstring( L, oname.name, (size_t)oname.len );
@@ -59,12 +79,8 @@ static int path_lua( lua_State *L )
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
     const char *path = NULL;
     
-    if( !c->col ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
-    }
-    else if( ( path = grn_obj_path( lgrn_get_ctx( c->t->g ), c->col ) ) ){
+    CHECK_EXISTS( L, c );
+    if( ( path = grn_obj_path( lgrn_get_ctx( c->t->g ), c->col ) ) ){
         lua_pushstring( L, path );
     }
     else {
@@ -78,65 +94,45 @@ static int path_lua( lua_State *L )
 static int type_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    size_t len = 0;
+    const char *name = NULL;
     
-    if( !c->col ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
-    }
-    else
-    {
-        size_t len = 0;
-        const char *name = lgrn_i2n_column( L, 
-            c->col->header.flags & GRN_OBJ_COLUMN_TYPE_MASK, &len 
-        );
-        
-        lua_pushlstring( L, name, len );
-        
-        return 1;
-    }
+    CHECK_EXISTS( L, c );
+    name = lgrn_i2n_column( L, c->col->header.flags & GRN_OBJ_COLUMN_TYPE_MASK,
+                            &len );
+    lua_pushlstring( L, name, len );
+    
+    return 1;
 }
 
 
 static int val_type_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    grn_id id = GRN_ID_NIL;
     
-    if( !c->col ){
+    CHECK_EXISTS( L, c );
+    id = grn_obj_get_range( lgrn_get_ctx( c->t->g ), c->col );
+    if( id != GRN_ID_NIL ){
+        size_t len = 0;
+        const char *name = lgrn_i2n_data( L, (int)id, &len );
+        lua_pushlstring( L, name, len );
+    }
+    else {
         lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
     }
-    else
-    {
-        grn_ctx *ctx = lgrn_get_ctx( c->t->g );
-        grn_id id = grn_obj_get_range( ctx, c->col );
-        
-        if( id != GRN_ID_NIL ){
-            size_t len = 0;
-            const char *name = lgrn_i2n_data( L, (int)id, &len );
-            lua_pushlstring( L, name, len );
-        }
-        else {
-            lua_pushnil( L );
-        }
-        
-        return 1;
-    }
+    
+    return 1;
 }
 
 
 static int compress_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
-    grn_id id = 0;
+    grn_id id = GRN_ID_NIL;
     
-    if( !c->col ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
-    }
-    else if( ( id = c->col->header.flags & GRN_OBJ_COMPRESS_MASK ) ){
+    CHECK_EXISTS( L, c );
+    if( ( id = c->col->header.flags & GRN_OBJ_COMPRESS_MASK ) ){
         size_t len = 0;
         const char *name = lgrn_i2n_compress( L, (int)id, &len );
         lua_pushlstring( L, name, len );
@@ -153,12 +149,7 @@ static int persistent_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
     
-    if( !c->col ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
-    }
-    
+    CHECK_EXISTS_EX( L, c, CHECK_RET_FALSE );
     lua_pushboolean( L, c->col->header.flags & GRN_OBJ_PERSISTENT );
 
     return 1;
@@ -168,82 +159,63 @@ static int persistent_lua( lua_State *L )
 static int with_weight_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    grn_obj_flags flags = 0;
     
-    if( !c->col ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
-    }
-    else
-    {
-        grn_obj_flags flags = c->col->header.flags;
+    CHECK_EXISTS_EX( L, c, CHECK_RET_FALSE );
+    flags = c->col->header.flags;
+    switch( flags & GRN_OBJ_COLUMN_TYPE_MASK ){
+        case GRN_OBJ_COLUMN_VECTOR:
+        case GRN_OBJ_COLUMN_INDEX:
+            lua_pushboolean( L, flags & GRN_OBJ_WITH_WEIGHT );
+        break;
         
-        switch( c->col->header.flags & GRN_OBJ_COLUMN_TYPE_MASK ){
-            case GRN_OBJ_COLUMN_VECTOR:
-            case GRN_OBJ_COLUMN_INDEX:
-                lua_pushboolean( L, flags & GRN_OBJ_WITH_WEIGHT );
-            break;
-            
-            default:
-                lua_pushboolean( L, 0 );
-        }
-        
-        return 1;
+        default:
+            lua_pushboolean( L, 0 );
     }
+    
+    return 1;
 }
 
 
 static int with_section_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    grn_obj_flags flags = 0;
     
-    if( !c->col ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
-    }
-    else
-    {
-        grn_obj_flags flags = c->col->header.flags;
+    CHECK_EXISTS_EX( L, c, CHECK_RET_FALSE );
+    flags = c->col->header.flags;
+    
+    switch( flags & GRN_OBJ_COLUMN_TYPE_MASK ){
+        case GRN_OBJ_COLUMN_INDEX:
+            lua_pushboolean( L, flags & GRN_OBJ_WITH_SECTION );
+        break;
         
-        switch( c->col->header.flags & GRN_OBJ_COLUMN_TYPE_MASK ){
-            case GRN_OBJ_COLUMN_INDEX:
-                lua_pushboolean( L, flags & GRN_OBJ_WITH_SECTION );
-            break;
-            
-            default:
-                lua_pushboolean( L, 0 );
-        }
-        
-        return 1;
+        default:
+            lua_pushboolean( L, 0 );
     }
+    
+    return 1;
 }
 
 
 static int with_position_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    grn_obj_flags flags = 0;
     
-    if( !c->col ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
-    }
-    else
-    {
-        grn_obj_flags flags = c->col->header.flags;
+    CHECK_EXISTS_EX( L, c, CHECK_RET_FALSE );
+    flags = c->col->header.flags;
+    
+    switch( flags & GRN_OBJ_COLUMN_TYPE_MASK ){
+        case GRN_OBJ_COLUMN_INDEX:
+            lua_pushboolean( L, flags & GRN_OBJ_WITH_POSITION );
+        break;
         
-        switch( c->col->header.flags & GRN_OBJ_COLUMN_TYPE_MASK ){
-            case GRN_OBJ_COLUMN_INDEX:
-                lua_pushboolean( L, flags & GRN_OBJ_WITH_POSITION );
-            break;
-            
-            default:
-                lua_pushboolean( L, 0 );
-        }
-        
-        return 1;
+        default:
+            lua_pushboolean( L, 0 );
     }
+    
+    return 1;
 }
 
 
@@ -251,12 +223,7 @@ static int table_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
     
-    if( !c->col ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
-    }
-    
+    CHECK_EXISTS( L, c );
     // push an associated table
     lstate_pushref( L, c->ref_t );
     
@@ -268,12 +235,7 @@ static int db_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
     
-    if( !c->col ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
-    }
-    
+    CHECK_EXISTS( L, c );
     // push an associated database
     lstate_pushref( L, c->t->ref_g );
     
@@ -284,32 +246,30 @@ static int db_lua( lua_State *L )
 static int rename_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    grn_ctx *ctx = NULL;
+    size_t len = 0;
+    const char *name = NULL;
     
-    if( !c->col ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENOCOLUMN );
-        return 2;
+    CHECK_EXISTS_EX( L, c, CHECK_RET_FALSE );
+    ctx = lgrn_get_ctx( c->t->g );
+    name = luaL_checklstring( L, 2, &len );
+    
+    if( len > GRN_TABLE_MAX_KEY_SIZE ){
+        lua_pushboolean( L, 0 );
+        lua_pushfstring( L, "column name length must be less than %u",
+                         GRN_TABLE_MAX_KEY_SIZE );
+        return 1;
     }
-    else
-    {
-        grn_ctx *ctx = lgrn_get_ctx( c->t->g );
-        size_t len = 0;
-        const char *name = luaL_checklstring( L, 2, &len );
-        
-        if( len > UINT_MAX ){
-            lua_pushfstring( 
-                L, "column name length must be less than %d", UINT_MAX 
-            );
-            return 1;
-        }
-        else if( grn_column_rename( ctx, c->col, name, 
-                                    (unsigned int)len ) != GRN_SUCCESS ){
-            lua_pushfstring( L, ctx->errbuf );
-            return 1;
-        }
-        
-        return 0;
+    else if( grn_column_rename( ctx, c->col, name, 
+                                (unsigned int)len ) != GRN_SUCCESS ){
+        lua_pushboolean( L, 0 );
+        lua_pushfstring( L, ctx->errbuf );
+        return 1;
     }
+    
+    lua_pushboolean( L, 1 );
+    
+    return 1;
 }
 
 
@@ -317,11 +277,14 @@ static int remove_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
     
-    c->removed = 1;
-    // force remove
-    if( c->col && lua_isboolean( L, 2 ) && lua_toboolean( L, 2 ) ){
-        grn_obj_remove( lgrn_get_ctx( c->t->g ), c->col );
-        c->col = NULL;
+    if( !c->removed )
+    {
+        c->removed = 1;
+        // force remove
+        if( c->col && lua_isboolean( L, 2 ) && lua_toboolean( L, 2 ) ){
+            grn_obj_remove( lgrn_get_ctx( c->t->g ), c->col );
+            c->col = NULL;
+        }
     }
     
     return 0;

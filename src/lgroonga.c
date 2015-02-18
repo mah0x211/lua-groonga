@@ -32,8 +32,23 @@
 
 #define ITERATOR_MT "groonga.table.iterator"
 
-#define LGRN_ENODB  "database has been removed"
 
+// helper macrocs
+#define CHECK_RET_NIL       lua_pushnil( L )
+#define CHECK_RET_FALSE     lua_pushboolean( L, 0 )
+
+#define IS_REMOVED( g ) ((g)->removed)
+
+#define CHECK_EXISTS_EX( L, g, CHECK_RET ) do{ \
+    if( IS_REMOVED( g ) ){ \
+        CHECK_RET; \
+        lua_pushstring( L, LGRN_ENODB ); \
+        return 2; \
+    } \
+}while(0)
+
+#define CHECK_EXISTS( L, g ) \
+    CHECK_EXISTS_EX( L, g, CHECK_RET_NIL )
 
 // MARK: table iterator
 typedef struct {
@@ -120,50 +135,40 @@ static void tbl_iter_init_mt( lua_State *L )
 static int table_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    grn_ctx *ctx = NULL;
+    size_t len = 0;
+    const char *name = NULL;
+    grn_obj *tbl = NULL;
+    lgrn_tbl_t *t = NULL;
     
-    if( !lgrn_get_db( g ) ){
+    CHECK_EXISTS( L, g );
+    name = luaL_checklstring( L, 2, &len );
+    ctx = lgrn_get_ctx( g );
+    
+    if( len > GRN_TABLE_MAX_KEY_SIZE && 
+        !( tbl = grn_ctx_get( ctx, name, (int)len ) ) ){
         lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENODB );
-        return 2;
+        return 1;
     }
-    else
-    {
-        int rv = 1;
-        grn_ctx *ctx = lgrn_get_ctx( g );
-        size_t len = 0;
-        const char *name = luaL_checklstring( L, 2, &len );
-        grn_obj *tbl = NULL;
-        lgrn_tbl_t *t = NULL;
-        
-        if( len < GRN_TABLE_MAX_KEY_SIZE && 
-            ( tbl = grn_ctx_get( ctx, name, (int)len ) ) )
-        {
-            if( lgrn_obj_istbl( tbl ) )
-            {
-                // create table metatable
-                if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
-                    lstate_setmetatable( L, GROONGA_TABLE_MT );
-                    // retain references
-                    lgrn_tbl_init( t, g, tbl, lstate_refat( L, 1 ) );
-                    
-                    return 1;
-                }
-                
-                // nomem error
-                lua_pushnil( L );
-                lua_pushstring( L, strerror( errno ) );
-                rv = 2;
-            }
-            grn_obj_unlink( ctx, tbl );
-        }
-        
-        // not found
-        if( rv == 1 ){
-            lua_pushnil( L );
-        }
-        
-        return rv;
+    else if( !lgrn_obj_istbl( tbl ) ){
+        grn_obj_unlink( ctx, tbl );
+        lua_pushnil( L );
+        return 1;
     }
+    // create table metatable
+    else if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
+        lstate_setmetatable( L, GROONGA_TABLE_MT );
+        // retain references
+        lgrn_tbl_init( t, g, tbl, lstate_refat( L, 1 ) );
+        return 1;
+    }
+
+    // nomem error
+    grn_obj_unlink( ctx, tbl );
+    lua_pushnil( L );
+    lua_pushstring( L, strerror( errno ) );
+    
+    return 2;
 }
 
 
@@ -174,7 +179,7 @@ static int tables_next_lua( lua_State *L )
     tbl_iter_t *it = lua_touserdata( L, lua_upvalueindex( 3 ) );
     int rv = 0;
     
-    if( !lgrn_get_db( g ) ){
+    if( IS_REMOVED( g ) ){
         lua_pushnil( L );
         lua_pushstring( L, LGRN_ENODB );
         rv = 2;
@@ -222,161 +227,149 @@ static int tables_next_lua( lua_State *L )
 static int tables_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    grn_ctx *ctx = lgrn_get_ctx( g );
+    int with_obj = 0;
+    tbl_iter_t *it = NULL;
     
-    if( !lgrn_get_db( g ) ){
+    CHECK_EXISTS( L, g );
+    ctx = lgrn_get_ctx( g );
+        
+    // check argument
+    if( lua_type( L, 2 ) == LUA_TBOOLEAN ){
+        with_obj = lua_toboolean( L, 2 );
+    }
+    // remove unused stack items
+    lua_settop( L, 1 );
+    lua_pushboolean( L, with_obj );
+    
+    // nomem
+    if( !( it = lua_newuserdata( L, sizeof( tbl_iter_t ) ) ) ){
         lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENODB );
+        lua_pushstring( L, strerror( errno ) );
         return 2;
     }
-    else
-    {
-        grn_ctx *ctx = lgrn_get_ctx( g );
-        int with_obj = 0;
-        tbl_iter_t *it = NULL;
-        
-        // check argument
-        if( lua_type( L, 2 ) == LUA_TBOOLEAN ){
-            with_obj = lua_toboolean( L, 2 );
-        }
-        // remove unused stack items
-        lua_settop( L, 1 );
-        lua_pushboolean( L, with_obj );
-        
-        // nomem
-        if( !( it = lua_newuserdata( L, sizeof( tbl_iter_t ) ) ) ){
-            lua_pushnil( L );
-            lua_pushstring( L, strerror( errno ) );
-            return 2;
-        }
-        // groonga error
-        else if( tbl_iter_init( it, ctx ) != GRN_SUCCESS ){
-            lua_pushnil( L );
-            lua_pushstring( L, ctx->errbuf );
-            return 2;
-        }
-        
-        // set metatable
-        lstate_setmetatable( L, ITERATOR_MT );
-        // upvalues: g, with_obj, it
-        lua_pushcclosure( L, tables_next_lua, 3 );
-        
-        return 1;
+    // groonga error
+    else if( tbl_iter_init( it, ctx ) != GRN_SUCCESS ){
+        lua_pushnil( L );
+        lua_pushstring( L, ctx->errbuf );
+        return 2;
     }
+    
+    // set metatable
+    lstate_setmetatable( L, ITERATOR_MT );
+    // upvalues: g, with_obj, it
+    lua_pushcclosure( L, tables_next_lua, 3 );
+    
+    return 1;
 }
 
 
 static int table_create_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
+    grn_ctx *ctx = NULL;
+    size_t len = 0;
+    const char *name = NULL;
+    const char *path = NULL;
+    grn_obj *ktype = NULL;
+    grn_obj *vtype = NULL;
+    grn_obj_flags flags = 0;
+    grn_obj *tbl = NULL;
+    lgrn_tbl_t *t = NULL;
     
-    if( !lgrn_get_db( g ) ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENODB );
-        return 2;
-    }
-    else
+    CHECK_EXISTS( L, g );
+    ctx = lgrn_get_ctx( g );
+    
+    // check arguments
+    if( lua_gettop( L ) > 1 )
     {
-        grn_ctx *ctx = lgrn_get_ctx( g );
-        size_t len = 0;
-        const char *name = NULL;
-        const char *path = NULL;
-        grn_obj *ktype = NULL;
-        grn_obj *vtype = NULL;
-        grn_obj_flags flags = 0;
-        grn_obj *tbl = NULL;
-        lgrn_tbl_t *t = NULL;
+        int id;
         
-        // check arguments
-        if( lua_gettop( L ) > 1 )
+        lua_settop( L, 2 );
+        luaL_checktype( L, 2, LUA_TTABLE );
+        
+        // path
+        path = lstate_toptstring( L, "path", NULL );
+        
+        // type
+        name = lstate_toptstring( L, "type", NULL );
+        if( name )
         {
-            int id;
-            
-            lua_settop( L, 2 );
-            luaL_checktype( L, 2, LUA_TTABLE );
-            
-            // path
-            path = lstate_toptstring( L, "path", NULL );
-            
-            // type
-            name = lstate_toptstring( L, "type", NULL );
-            if( name )
-            {
-                id = lgrn_n2i_table( L, name );
-                if( id == -1 ){
-                    return luaL_argerror( L, 2, "invalid type value" );
-                }
-                flags |= id;
+            id = lgrn_n2i_table( L, name );
+            if( id == -1 ){
+                return luaL_argerror( L, 2, "invalid type value" );
             }
-            
-            // keyType
-            name = lstate_toptstring( L, "keyType", NULL );
-            if( name )
-            {
-                id = lgrn_n2i_data( L, name );
-                if( id == -1 || !( ktype = grn_ctx_at( ctx, (grn_id)id ) ) ){
-                    return luaL_argerror( L, 2, "invalid keyType value" );
-                }
-            }
-            
-            // valType
-            name = lstate_toptstring( L, "valType", NULL );
-            if( name )
-            {
-                id = lgrn_n2i_data( L, name );
-                if( id == -1 || !( vtype = grn_ctx_at( ctx, (grn_id)id ) ) ){
-                    return luaL_argerror( L, 2, "invalid valType value" );
-                }
-            }
-            
-            // name
-            name = lstate_toptlstring( L, "name", NULL, &len );
-            if( len > UINT_MAX ){
-                lua_pushnil( L );
-                lua_pushfstring( L, "table name length must be less than %d", 
-                                 GRN_TABLE_MAX_KEY_SIZE );
-                return 2;
-            }
-            // set persistent flag automatically if name is not null
-            else if( len || lstate_toptboolean( L, "persistent", 0 ) ){
-                flags |= GRN_OBJ_PERSISTENT;
-            }
-            
-            // withSIS flag
-            if( lstate_toptboolean( L, "withSIS", 0 ) ){
-                flags |= GRN_OBJ_KEY_WITH_SIS;
-            }
-            
-            // normalize flag
-            if( lstate_toptboolean( L, "normalize", 0 ) ){
-                flags |= GRN_OBJ_KEY_NORMALIZE;
-            }
+            flags |= id;
         }
-
-        // create table metatable
-        if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) )
+        
+        // keyType
+        name = lstate_toptstring( L, "keyType", NULL );
+        if( name )
         {
-            // create table
-            if( ( tbl = grn_table_create( ctx, name, (unsigned int)len, path, 
-                                          flags, ktype, vtype ) ) ){
-                lstate_setmetatable( L, GROONGA_TABLE_MT );
-                // init fields
-                lgrn_tbl_init( t, g, tbl, lstate_refat( L, 1 ) );
-                
-                return 1;
+            id = lgrn_n2i_data( L, name );
+            if( id == -1 || !( ktype = grn_ctx_at( ctx, (grn_id)id ) ) ){
+                return luaL_argerror( L, 2, "invalid keyType value" );
             }
-            
-            // got error
-            lua_pushnil( L );
-            lua_pushstring( L, ctx->errbuf );
         }
-        // nomem error
-        else {
-            lua_pushnil( L );
-            lua_pushstring( L, strerror( errno ) );
+        
+        // valType
+        name = lstate_toptstring( L, "valType", NULL );
+        if( name )
+        {
+            id = lgrn_n2i_data( L, name );
+            if( id == -1 || !( vtype = grn_ctx_at( ctx, (grn_id)id ) ) ){
+                return luaL_argerror( L, 2, "invalid valType value" );
+            }
         }
-    
-        return 2;
+        
+        // name
+        name = lstate_toptlstring( L, "name", NULL, &len );
+        if( len > GRN_TABLE_MAX_KEY_SIZE ){
+            lua_pushnil( L );
+            lua_pushfstring( L, "table name length must be less than %u", 
+                             GRN_TABLE_MAX_KEY_SIZE );
+            return 2;
+        }
+        // set persistent flag automatically if name is not null
+        else if( len || lstate_toptboolean( L, "persistent", 0 ) ){
+            flags |= GRN_OBJ_PERSISTENT;
+        }
+        
+        // withSIS flag
+        if( lstate_toptboolean( L, "withSIS", 0 ) ){
+            flags |= GRN_OBJ_KEY_WITH_SIS;
+        }
+        
+        // normalize flag
+        if( lstate_toptboolean( L, "normalize", 0 ) ){
+            flags |= GRN_OBJ_KEY_NORMALIZE;
+        }
     }
+
+    // create table metatable
+    if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) )
+    {
+        // create table
+        if( ( tbl = grn_table_create( ctx, name, (unsigned int)len, path, 
+                                      flags, ktype, vtype ) ) ){
+            lstate_setmetatable( L, GROONGA_TABLE_MT );
+            // init fields
+            lgrn_tbl_init( t, g, tbl, lstate_refat( L, 1 ) );
+            
+            return 1;
+        }
+        
+        // got error
+        lua_pushnil( L );
+        lua_pushstring( L, ctx->errbuf );
+    }
+    // nomem error
+    else {
+        lua_pushnil( L );
+        lua_pushstring( L, strerror( errno ) );
+    }
+
+    return 2;
 }
 
 
@@ -385,15 +378,9 @@ static int table_create_lua( lua_State *L )
 static int path_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
-    grn_obj *db = lgrn_get_db( g );
     
-    if( !db ){
-        lua_pushnil( L );
-        lua_pushstring( L, LGRN_ENODB );
-        return 2;
-    }
-    
-    lua_pushstring( L, grn_obj_path( lgrn_get_ctx( g ), db ) );
+    CHECK_EXISTS_EX( L, g, CHECK_RET_FALSE );
+    lua_pushstring( L, grn_obj_path( lgrn_get_ctx( g ), lgrn_get_db( g ) ) );
     
     return 1;
 }
@@ -402,15 +389,9 @@ static int path_lua( lua_State *L )
 static int touch_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
-    grn_obj *db = lgrn_get_db( g );
     
-    if( !db ){
-        lua_pushboolean( L, 0 );
-        lua_pushstring( L, LGRN_ENODB );
-        return 2;
-    }
-    
-    grn_db_touch( lgrn_get_ctx( g ), db );
+    CHECK_EXISTS_EX( L, g, CHECK_RET_FALSE );
+    grn_db_touch( lgrn_get_ctx( g ), lgrn_get_db( g ) );
     lua_pushboolean( L, 1 );
     
     return 1;
@@ -420,12 +401,16 @@ static int touch_lua( lua_State *L )
 static int remove_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
-    grn_obj *db = lgrn_get_db( g );
     
-    g->removed = 1;
-    // can be remove immediately if reference counter is 0
-    if( db && !g->retain ){
-        grn_obj_remove( lgrn_get_ctx( g ), db );
+    if( !g->removed )
+    {
+        grn_obj *db = lgrn_get_db( g );
+        
+        g->removed = 1;
+        // can be remove immediately if reference counter is 0
+        if( db && !g->retain ){
+            grn_obj_remove( lgrn_get_ctx( g ), db );
+        }
     }
     
     return 0;
@@ -524,6 +509,8 @@ static int version_lua( lua_State *L )
 // finalizing groonga library
 static int finalize_lua( lua_State *L )
 {
+    #pragma unused( L )
+    
     grn_fin();
     return 0;
 }

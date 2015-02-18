@@ -306,6 +306,9 @@ static inline int lgrn_obj_istbl( grn_obj *obj )
 
 
 // MARK: database
+
+#define LGRN_ENODB  "database has been removed"
+
 typedef struct {
     grn_ctx ctx;
     uint8_t removed;
@@ -347,6 +350,9 @@ static inline grn_obj *lgrn_get_db( lgrn_t *g )
 
 
 // MARK: table
+
+#define LGRN_ENOTABLE  "table has been removed"
+
 typedef struct {
     lgrn_t *g;
     grn_obj *tbl;
@@ -367,6 +373,9 @@ static inline void lgrn_tbl_init( lgrn_tbl_t *t, lgrn_t *g, grn_obj *tbl,
 
 
 // MARK: column management
+
+#define LGRN_ENOCOLUMN  "column has been removed"
+
 typedef struct {
     lgrn_tbl_t *t;
     grn_obj *col;
