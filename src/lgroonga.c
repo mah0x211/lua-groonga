@@ -379,7 +379,7 @@ static int path_lua( lua_State *L )
 {
     lgrn_t *g = luaL_checkudata( L, 1, MODULE_MT );
     
-    CHECK_EXISTS_EX( L, g, CHECK_RET_FALSE );
+    CHECK_EXISTS( L, g );
     lua_pushstring( L, grn_obj_path( lgrn_get_ctx( g ), lgrn_get_db( g ) ) );
     
     return 1;
