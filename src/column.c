@@ -37,9 +37,9 @@
 #define CHECK_RET_FALSE     lua_pushboolean( L, 0 )
 
 #define CHECK_EXISTS_EX( L, c, CHECK_RET ) do{ \
-    if( (c)->removed ){ \
+    if( (c)->t->g->removed ){ \
         CHECK_RET; \
-        lua_pushstring( L, LGRN_ENOCOLUMN ); \
+        lua_pushstring( L, LGRN_ENODB ); \
         return 2; \
     } \
     else if( (c)->t->removed ){ \
@@ -47,9 +47,9 @@
         lua_pushstring( L, LGRN_ENOTABLE ); \
         return 2; \
     } \
-    else if( (c)->t->g->removed ){ \
+    else if( (c)->removed ){ \
         CHECK_RET; \
-        lua_pushstring( L, LGRN_ENODB ); \
+        lua_pushstring( L, LGRN_ENOCOLUMN ); \
         return 2; \
     } \
 }while(0)

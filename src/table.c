@@ -41,14 +41,14 @@
     ((t)->removed || (t)->g->removed)
 
 #define CHECK_EXISTS_EX( L, t, CHECK_RET ) do{ \
-    if( (t)->removed ){ \
-        CHECK_RET; \
-        lua_pushstring( L, LGRN_ENOTABLE ); \
-        return 2; \
-    } \
-    else if( (t)->g->removed ){ \
+    if( (t)->g->removed ){ \
         CHECK_RET; \
         lua_pushstring( L, LGRN_ENODB ); \
+        return 2; \
+    } \
+    else if( (t)->removed ){ \
+        CHECK_RET; \
+        lua_pushstring( L, LGRN_ENOTABLE ); \
         return 2; \
     } \
 }while(0)
