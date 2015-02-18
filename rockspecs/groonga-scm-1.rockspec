@@ -25,6 +25,7 @@ build = {
             sources = {
                 "src/lgroonga.c",
                 "src/constants.c",
+                "src/weakref.c",
                 "src/table.c",
                 "src/column.c"
             },

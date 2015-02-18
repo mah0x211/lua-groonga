@@ -387,4 +387,16 @@ static inline void lgrn_col_init( lgrn_col_t *c, lgrn_tbl_t *t, grn_obj *col,
 }
 
 
+
+// MARK: weak reference utility
+void lgrn_weakref_init( lua_State *L );
+// table reference
+int lgrn_refget_tbl( lua_State *L, const char *name, size_t len );
+void lgrn_refset_tbl( lua_State *L, const char *name, size_t len, int idx );
+// column reference
+int lgrn_refget_col( lua_State *L, const char *name, size_t len );
+void lgrn_refset_col( lua_State *L, const char *name, size_t len, int idx );
+
+
+
 #endif

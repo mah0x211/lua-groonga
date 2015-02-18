@@ -555,6 +555,7 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     global_init( L );
     tbl_iter_init_mt( L );
     lgrn_constants_init( L );
+    lgrn_weakref_init( L );
     // create metatable
     lgrn_register_mt( L, MODULE_MT, mmethods, methods );
     // register related module
