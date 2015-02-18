@@ -30,9 +30,6 @@
 
 #define MODULE_MT   GROONGA_MT
 
-#define ITERATOR_MT "groonga.table.iterator"
-
-
 // helper macrocs
 #define CHECK_RET_NIL       lua_pushnil( L )
 #define CHECK_RET_FALSE     lua_pushboolean( L, 0 )
@@ -50,7 +47,12 @@
 #define CHECK_EXISTS( L, g ) \
     CHECK_EXISTS_EX( L, g, CHECK_RET_NIL )
 
+
+
 // MARK: table iterator
+
+#define ITERATOR_MT "groonga.table.iterator"
+
 typedef struct {
     grn_ctx *ctx;
     grn_table_cursor *cur;
@@ -150,15 +152,23 @@ static int table_lua( lua_State *L )
         lua_pushnil( L );
         return 1;
     }
+    // not table
     else if( !lgrn_obj_istbl( tbl ) ){
         grn_obj_unlink( ctx, tbl );
         lua_pushnil( L );
         return 1;
     }
+    // lookup from weak reference
+    else if( lgrn_refget_tbl( L, name, len ) ){
+        grn_obj_unlink( ctx, tbl );
+        return 1;
+    }
     // create table metatable
     else if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
         lstate_setmetatable( L, GROONGA_TABLE_MT );
-        // retain references
+        // save reference
+        lgrn_refset_tbl( L, name, len, -1 );
+        // init fields
         lgrn_tbl_init( t, g, tbl, lstate_refat( L, 1 ) );
         return 1;
     }
@@ -200,9 +210,17 @@ static int tables_next_lua( lua_State *L )
             if( !with_obj ){
                 return 1;
             }
+            // lookup from weak reference
+            else if( lgrn_refget_tbl( L, oname.name, (size_t)oname.len ) ){
+                grn_obj_unlink( it->ctx, tbl );
+                return 2;
+            }
             // create table metatable
             else if( ( t = lua_newuserdata( L, sizeof( lgrn_tbl_t ) ) ) ){
                 lstate_setmetatable( L, GROONGA_TABLE_MT );
+                // save reference
+                lgrn_refset_tbl( L, oname.name, (size_t)oname.len, -1 );
+                // init fields
                 lgrn_tbl_init( 
                     t, g, tbl, lstate_refat( L, lua_upvalueindex( 1 ) ) 
                 );
@@ -353,9 +371,10 @@ static int table_create_lua( lua_State *L )
         if( ( tbl = grn_table_create( ctx, name, (unsigned int)len, path, 
                                       flags, ktype, vtype ) ) ){
             lstate_setmetatable( L, GROONGA_TABLE_MT );
+            // save reference
+            lgrn_refset_tbl( L, name, len, -1 );
             // init fields
             lgrn_tbl_init( t, g, tbl, lstate_refat( L, 1 ) );
-            
             return 1;
         }
         

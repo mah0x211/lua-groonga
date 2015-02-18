@@ -30,9 +30,6 @@
 
 #define MODULE_MT   GROONGA_TABLE_MT
 
-#define ITERATOR_MT "groonga.column.iterator"
-
-
 // helper macrocs
 #define CHECK_RET_NIL       lua_pushnil( L )
 #define CHECK_RET_FALSE     lua_pushboolean( L, 0 )
@@ -57,7 +54,11 @@
     CHECK_EXISTS_EX( L, t, CHECK_RET_NIL )
 
 
+
 // MARK: column lookup iterator
+
+#define ITERATOR_MT "groonga.column.iterator"
+
 typedef struct {
     grn_ctx *ctx;
     grn_hash_cursor *cur;
@@ -185,6 +186,11 @@ static int column_lua( lua_State *L )
         lua_pushnil( L );
         return 1;
     }
+    // lookup from weak reference
+    else if( lgrn_refget_col( L, name, len ) ){
+        grn_obj_unlink( ctx, col );
+        return 1;
+    }
     // alloc lgrn_col_t
     else if( ( c = lua_newuserdata( L, sizeof( lgrn_col_t ) ) ) ){
         lstate_setmetatable( L, GROONGA_COLUMN_MT );
@@ -233,10 +239,17 @@ static int columns_next_lua( lua_State *L )
             if( !with_obj ){
                 return 1;
             }
+            // lookup from weak reference
+            else if( lgrn_refget_col( L, oname.name, (size_t)oname.len ) ){
+                grn_obj_unlink( it->ctx, col );
+                return 2;
+            }
             // create table metatable
             else if( ( c = lua_newuserdata( L, sizeof( lgrn_col_t ) ) ) ){
                 lstate_setmetatable( L, GROONGA_COLUMN_MT );
-                // retain references
+                // save reference
+                lgrn_refset_col( L, oname.name, (size_t)oname.len, -1 );
+                // init fields
                 lgrn_col_init( 
                     c, t, col, lstate_refat( L, lua_upvalueindex( 1 ) )
                 );
@@ -432,10 +445,11 @@ static int column_create_lua( lua_State *L )
         // create table
         if( ( col = grn_column_create( ctx, t->tbl, name, 
                                        (unsigned int)len, path, flags,
-                                       vtype ) ) )
-        {
+                                       vtype ) ) ){
             lstate_setmetatable( L, GROONGA_COLUMN_MT );
-            // retain references
+            // save reference
+            lgrn_refset_col( L, name, len, -1 );
+            // init fields
             lgrn_col_init( c, t, col, lstate_refat( L, 1 ) );
             
             return 1;
