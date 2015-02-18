@@ -612,6 +612,23 @@ static int normalize_lua( lua_State *L )
 }
 
 
+static int db_lua( lua_State *L )
+{
+    lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
+    
+    if( !t->tbl ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOTABLE );
+        return 2;
+    }
+    
+    // push an associated database
+    lstate_pushref( L, t->ref_g );
+    
+    return 1;
+}
+
+
 static int remove_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
@@ -663,6 +680,7 @@ LUALIB_API int luaopen_groonga_table( lua_State *L )
     };
     struct luaL_Reg methods[] = {
         { "remove", remove_lua },
+        { "db", db_lua },
         { "name", name_lua },
         { "path", path_lua },
         { "type", type_lua },
