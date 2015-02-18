@@ -145,7 +145,7 @@ static int table_lua( lua_State *L )
     name = luaL_checklstring( L, 2, &len );
     ctx = lgrn_get_ctx( g );
     
-    if( len > GRN_TABLE_MAX_KEY_SIZE && 
+    if( len > GRN_TABLE_MAX_KEY_SIZE || 
         !( tbl = grn_ctx_get( ctx, name, (int)len ) ) ){
         lua_pushnil( L );
         return 1;
