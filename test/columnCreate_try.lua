@@ -32,6 +32,8 @@ for _, spec in ipairs({
     },
 }) do
     c = ifNil( t:columnCreate( spec ) );
+    -- verify db
+    ifNotEqual( g, c:db() );
     -- verify table
     ifNotEqual( t, c:table() );
     -- verify spec
