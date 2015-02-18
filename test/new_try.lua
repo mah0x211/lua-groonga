@@ -17,5 +17,8 @@ ifNil( groonga.new( path ) );
 ifNil( groonga.new( nil, true ) );
 
 -- remove db
-g:remove();
+g = groonga.new( path );
+if g then
+    g:remove();
+end
 
