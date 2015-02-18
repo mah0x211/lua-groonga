@@ -593,17 +593,13 @@ static int remove_lua( lua_State *L )
 {
     lgrn_tbl_t *t = luaL_checkudata( L, 1, MODULE_MT );
     
-    if( !t->removed )
-    {
-        t->removed = 1;
-        // force remove
-        if( t->tbl && lua_isboolean( L, 2 ) && lua_toboolean( L, 2 ) ){
-            grn_obj_remove( lgrn_get_ctx( t->g ), t->tbl );
-            t->tbl = NULL;
-        }
-    }
+    CHECK_EXISTS_EX( L, t, CHECK_RET_FALSE );
+    grn_obj_remove( lgrn_get_ctx( t->g ), t->tbl );
+    t->removed = 1;
+    t->tbl = NULL;
+    lua_pushboolean( L, 1 );
     
-    return 0;
+    return 1;
 }
 
 
@@ -617,19 +613,12 @@ static int gc_lua( lua_State *L )
 {
     lgrn_tbl_t *t = lua_touserdata( L, 1 );
     
-    if( t->tbl )
-    {
-        if( t->removed ){
-            grn_obj_remove( lgrn_get_ctx( t->g ), t->tbl );
-        }
-        else {
-            grn_obj_unlink( lgrn_get_ctx( t->g ), t->tbl );
-        }
+    if( t->tbl && !t->g->removed ){
+        grn_obj_unlink( lgrn_get_ctx( t->g ), t->tbl );
     }
     // release reference
     lstate_unref( L, t->ref_g );
-    lgrn_release( t->g );
-    
+
     return 0;
 }
 

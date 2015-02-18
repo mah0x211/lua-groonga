@@ -318,25 +318,7 @@ static inline int lgrn_obj_istbl( grn_obj *obj )
 typedef struct {
     grn_ctx ctx;
     uint8_t removed;
-    uint64_t retain;
 } lgrn_t;
-
-
-static inline lgrn_t *lgrn_retain( lgrn_t *g )
-{
-    g->retain++;
-    return g;
-}
-
-
-static inline uint64_t lgrn_release( lgrn_t *g )
-{
-    if( g->retain ){
-        g->retain--;
-    }
-    
-    return g->retain;
-}
 
 
 static inline grn_ctx *lgrn_get_ctx( lgrn_t *g )
@@ -347,11 +329,7 @@ static inline grn_ctx *lgrn_get_ctx( lgrn_t *g )
 
 static inline grn_obj *lgrn_get_db( lgrn_t *g )
 {
-    if( !g->removed ){
-        return grn_ctx_db( &g->ctx );
-    }
-    
-    return NULL;
+    return grn_ctx_db( &g->ctx );
 }
 
 
@@ -372,7 +350,7 @@ static inline void lgrn_tbl_init( lgrn_tbl_t *t, lgrn_t *g, grn_obj *tbl,
                                   int ref )
 {
     t->ref_g = ref;
-    t->g = lgrn_retain( g );
+    t->g = g;
     t->tbl = tbl;
     t->removed = 0;
 }
