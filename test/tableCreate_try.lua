@@ -1,4 +1,3 @@
-local INSPECT_OPT = { depth = 0 };
 local groonga = require('groonga');
 local unpack = table.unpack or unpack;
 local path = './db/testdb';
@@ -43,6 +42,8 @@ for _, spec in ipairs({
     }
 }) do
     t = ifNil( g:tableCreate( spec ) );
+    -- verify db
+    ifNotEqual( g, t:db() );
     -- verify spec
     for k, v in pairs( spec ) do
         ifNotEqual( t[k]( t ), v );
