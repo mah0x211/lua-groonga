@@ -69,6 +69,12 @@
     lua_rawset(L,-3); \
 }while(0)
 
+#define lstate_str2tbl(L,k,v) do{ \
+    lua_pushstring(L,k); \
+    lua_pushstring(L,v); \
+    lua_rawset(L,-3); \
+}while(0)
+
 #define lstate_int2tbl(L,k,v) do{ \
     lua_pushstring(L,k); \
     lua_pushinteger(L,v); \
@@ -283,7 +289,7 @@ typedef struct {
     char name[GRN_TABLE_MAX_KEY_SIZE];
 } lgrn_objname_t;
 
-
+// get a non null-terminated name string
 static inline int lgrn_get_objname( lgrn_objname_t *oname, grn_ctx *ctx, 
                                     grn_obj *obj )
 {
