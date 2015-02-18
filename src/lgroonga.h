@@ -204,10 +204,12 @@ static inline int lstate_toptboolean( lua_State *L, const char *k, int defval )
 
 // MARK: prototypes
 LUALIB_API int luaopen_groonga( lua_State *L );
-LUALIB_API int luaopen_groonga_constants( lua_State *L );
 LUALIB_API int luaopen_groonga_table( lua_State *L );
 LUALIB_API int luaopen_groonga_column( lua_State *L );
 
+
+// constants conversion
+void lgrn_constants_init( lua_State *L );
 // get constants value by name
 int lgrn_n2i_data( lua_State *L, const char *name );
 int lgrn_n2i_table( lua_State *L, const char *name );

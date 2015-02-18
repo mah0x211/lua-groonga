@@ -110,7 +110,7 @@ const char *lgrn_i2n_compress( lua_State *L, int id, size_t *len )
 }
 
 
-LUALIB_API int luaopen_groonga_constants( lua_State *L )
+void lgrn_constants_init( lua_State *L )
 {
     // data type
     lua_newtable( L );
@@ -196,8 +196,6 @@ LUALIB_API int luaopen_groonga_constants( lua_State *L )
     lstate_str2arr( L, GRN_OBJ_COMPRESS_ZLIB >> 4, "ZLIB" );
     lstate_str2arr( L, GRN_OBJ_COMPRESS_LZ4 >> 4, "LZ4" );
     REF_I2N_COMPRESS = lstate_ref( L );
-
-    return 0;
 }
 
 

@@ -554,10 +554,10 @@ LUALIB_API int luaopen_groonga( lua_State *L )
     // initialize groonga global variables
     global_init( L );
     tbl_iter_init_mt( L );
+    lgrn_constants_init( L );
     // create metatable
     lgrn_register_mt( L, MODULE_MT, mmethods, methods );
     // register related module
-    luaopen_groonga_constants( L );
     luaopen_groonga_table( L );
     luaopen_groonga_column( L );
     
