@@ -171,7 +171,7 @@ static int column_lua( lua_State *L )
         else if( ( c = lua_newuserdata( L, sizeof( lgrn_col_t ) ) ) ){
             lstate_setmetatable( L, GROONGA_COLUMN_MT );
             // retain references
-            lgrn_col_init( c, t->g, col, lstate_refat( L, 1 ) );
+            lgrn_col_init( c, t, col, lstate_refat( L, 1 ) );
             
             return 1;
         }
@@ -221,7 +221,7 @@ static int columns_next_lua( lua_State *L )
                 lstate_setmetatable( L, GROONGA_COLUMN_MT );
                 // retain references
                 lgrn_col_init( 
-                    c, t->g, col, lstate_refat( L, lua_upvalueindex( 1 ) )
+                    c, t, col, lstate_refat( L, lua_upvalueindex( 1 ) )
                 );
                 
                 return 2;
@@ -430,7 +430,7 @@ static int column_create_lua( lua_State *L )
             {
                 lstate_setmetatable( L, GROONGA_COLUMN_MT );
                 // retain references
-                lgrn_col_init( c, t->g, col, lstate_refat( L, 1 ) );
+                lgrn_col_init( c, t, col, lstate_refat( L, 1 ) );
                 
                 return 1;
             }

@@ -46,7 +46,7 @@ static int name_lua( lua_State *L )
         return 2;
     }
     
-    oname.len = grn_column_name( lgrn_get_ctx( c->g ), c->col, oname.name, 
+    oname.len = grn_column_name( lgrn_get_ctx( c->t->g ), c->col, oname.name, 
                                  GRN_TABLE_MAX_KEY_SIZE );
     lua_pushlstring( L, oname.name, (size_t)oname.len );
     
@@ -64,7 +64,7 @@ static int path_lua( lua_State *L )
         lua_pushstring( L, LGRN_ENOCOLUMN );
         return 2;
     }
-    else if( ( path = grn_obj_path( lgrn_get_ctx( c->g ), c->col ) ) ){
+    else if( ( path = grn_obj_path( lgrn_get_ctx( c->t->g ), c->col ) ) ){
         lua_pushstring( L, path );
     }
     else {
@@ -109,7 +109,7 @@ static int val_type_lua( lua_State *L )
     }
     else
     {
-        grn_ctx *ctx = lgrn_get_ctx( c->g );
+        grn_ctx *ctx = lgrn_get_ctx( c->t->g );
         grn_id id = grn_obj_get_range( ctx, c->col );
         
         if( id != GRN_ID_NIL ){
@@ -260,10 +260,10 @@ static int gc_lua( lua_State *L )
     if( c->col )
     {
         if( c->removed ){
-            grn_obj_remove( lgrn_get_ctx( c->g ), c->col );
+            grn_obj_remove( lgrn_get_ctx( c->t->g ), c->col );
         }
         else {
-            grn_obj_unlink( lgrn_get_ctx( c->g ), c->col );
+            grn_obj_unlink( lgrn_get_ctx( c->t->g ), c->col );
         }
     }
     // release reference

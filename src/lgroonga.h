@@ -368,7 +368,7 @@ static inline void lgrn_tbl_init( lgrn_tbl_t *t, lgrn_t *g, grn_obj *tbl,
 
 // MARK: column management
 typedef struct {
-    lgrn_t *g;
+    lgrn_tbl_t *t;
     grn_obj *col;
     uint8_t removed;
     int ref_t;
@@ -376,11 +376,11 @@ typedef struct {
 
 
 // initialize lgrn_col_t
-static inline void lgrn_col_init( lgrn_col_t *c, lgrn_t *g, grn_obj *col, 
+static inline void lgrn_col_init( lgrn_col_t *c, lgrn_tbl_t *t, grn_obj *col, 
                                   int ref )
 {
     c->ref_t = ref;
-    c->g = g;
+    c->t = t;
     c->col = col;
     c->removed = 0;
 }
