@@ -150,7 +150,7 @@ static int persistent_lua( lua_State *L )
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
     
     CHECK_EXISTS_EX( L, c, CHECK_RET_FALSE );
-    lua_pushboolean( L, c->col->header.flags & GRN_OBJ_PERSISTENT );
+    lua_pushboolean( L, lgrn_obj_ispersistent( c->col ) );
 
     return 1;
 }

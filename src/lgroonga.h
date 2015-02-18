@@ -290,6 +290,12 @@ static inline int lgrn_get_objname( lgrn_objname_t *oname, grn_ctx *ctx,
 }
 
 
+static inline int lgrn_obj_ispersistent( grn_obj *obj )
+{
+    return obj->header.flags & GRN_OBJ_PERSISTENT;
+}
+
+
 static inline int lgrn_obj_istbl( grn_obj *obj )
 {
     switch( obj->header.type ){
