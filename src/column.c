@@ -247,6 +247,23 @@ static int with_position_lua( lua_State *L )
 }
 
 
+static int table_lua( lua_State *L )
+{
+    lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    
+    if( !c->col ){
+        lua_pushnil( L );
+        lua_pushstring( L, LGRN_ENOCOLUMN );
+        return 2;
+    }
+    
+    // push an associated table
+    lstate_pushref( L, c->ref_t );
+    
+    return 1;
+}
+
+
 static int remove_lua( lua_State *L )
 {
     lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
@@ -297,6 +314,7 @@ LUALIB_API int luaopen_groonga_column( lua_State *L )
     };
     struct luaL_Reg methods[] = {
         { "remove", remove_lua },
+        { "table", table_lua },
         { "name", name_lua },
         { "path", path_lua },
         { "type", type_lua },
