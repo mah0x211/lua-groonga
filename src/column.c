@@ -247,6 +247,21 @@ static int with_position_lua( lua_State *L )
 }
 
 
+static int remove_lua( lua_State *L )
+{
+    lgrn_col_t *c = luaL_checkudata( L, 1, MODULE_MT );
+    
+    c->removed = 1;
+    // force remove
+    if( c->col && lua_isboolean( L, 2 ) && lua_toboolean( L, 2 ) ){
+        grn_obj_remove( lgrn_get_ctx( c->t->g ), c->col );
+        c->col = NULL;
+    }
+    
+    return 0;
+}
+
+
 static int tostring_lua( lua_State *L )
 {
     return lgrn_tostring( L, MODULE_MT );
@@ -281,6 +296,7 @@ LUALIB_API int luaopen_groonga_column( lua_State *L )
         { NULL, NULL }
     };
     struct luaL_Reg methods[] = {
+        { "remove", remove_lua },
         { "name", name_lua },
         { "path", path_lua },
         { "type", type_lua },
