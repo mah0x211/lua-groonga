@@ -114,7 +114,7 @@ static int val_type_lua( lua_State *L )
         
         if( id != GRN_ID_NIL ){
             size_t len = 0;
-            const char *name = lgrn_i2n_data( L, id, &len );
+            const char *name = lgrn_i2n_data( L, (int)id, &len );
             lua_pushlstring( L, name, len );
         }
         else {
@@ -138,7 +138,7 @@ static int compress_lua( lua_State *L )
     }
     else if( ( id = c->col->header.flags & GRN_OBJ_COMPRESS_MASK ) ){
         size_t len = 0;
-        const char *name = lgrn_i2n_compress( L, id, &len );
+        const char *name = lgrn_i2n_compress( L, (int)id, &len );
         lua_pushlstring( L, name, len );
     }
     else {

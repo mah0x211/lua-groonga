@@ -161,7 +161,7 @@ static int column_lua( lua_State *L )
         grn_ctx *ctx = lgrn_get_ctx( t->g );
         lgrn_col_t *c = NULL;
         grn_obj *col = ( len > GRN_TABLE_MAX_KEY_SIZE ) ? NULL :
-                        grn_obj_column( ctx, t->tbl, name, len );
+                        grn_obj_column( ctx, t->tbl, name, (unsigned int)len );
         
         if( !col ){
             lua_pushnil( L );
@@ -338,7 +338,7 @@ static int column_create_lua( lua_State *L )
             if( name )
             {
                 id = lgrn_n2i_data( L, name );
-                if( id == -1 || !( vtype = grn_ctx_at( ctx, id ) ) ){
+                if( id == -1 || !( vtype = grn_ctx_at( ctx, (grn_id)id ) ) ){
                     return luaL_argerror( L, 2, "invalid valType value" );
                 }
             }
@@ -425,8 +425,8 @@ static int column_create_lua( lua_State *L )
         {
             // create table
             if( ( col = grn_column_create( ctx, t->tbl, name, 
-                                           (unsigned int)len, path, 
-                                           flags, vtype ) ) )
+                                           (unsigned int)len, path, flags,
+                                           vtype ) ) )
             {
                 lstate_setmetatable( L, GROONGA_COLUMN_MT );
                 // retain references
@@ -531,7 +531,7 @@ static int key_type_lua( lua_State *L )
     }
     else {
         size_t len = 0;
-        const char *name = lgrn_i2n_data( L, t->tbl->header.domain, &len );
+        const char *name = lgrn_i2n_data( L, (int)t->tbl->header.domain, &len );
         lua_pushlstring( L, name, len );
     }
     
@@ -553,7 +553,7 @@ static int val_type_lua( lua_State *L )
     id = grn_obj_get_range( lgrn_get_ctx( t->g ), t->tbl );
     if( id != GRN_ID_NIL ){
         size_t len = 0;
-        const char *name = lgrn_i2n_data( L, id, &len );
+        const char *name = lgrn_i2n_data( L, (int)id, &len );
         lua_pushlstring( L, name, len );
     }
     else {

@@ -34,7 +34,7 @@ static int REF_N2I_TABLE;
 static int REF_N2I_COLUMN;
 static int REF_N2I_COMPRESS;
 
-static lua_Integer name2id( lua_State *L, int ref, const char *name )
+static int name2id( lua_State *L, int ref, const char *name )
 {
     lua_Integer val = -1;
     
@@ -46,7 +46,7 @@ static lua_Integer name2id( lua_State *L, int ref, const char *name )
     }
     lua_pop( L, 2 );
     
-    return val;
+    return (int)val;
 }
 
 int lgrn_n2i_data( lua_State *L, const char *name )

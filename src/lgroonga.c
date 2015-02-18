@@ -136,7 +136,7 @@ static int table_lua( lua_State *L )
         lgrn_tbl_t *t = NULL;
         
         if( len < GRN_TABLE_MAX_KEY_SIZE && 
-            ( tbl = grn_ctx_get( ctx, name, len ) ) )
+            ( tbl = grn_ctx_get( ctx, name, (int)len ) ) )
         {
             if( lgrn_obj_istbl( tbl ) )
             {
@@ -313,7 +313,7 @@ static int table_create_lua( lua_State *L )
             if( name )
             {
                 id = lgrn_n2i_data( L, name );
-                if( id == -1 || !( ktype = grn_ctx_at( ctx, id ) ) ){
+                if( id == -1 || !( ktype = grn_ctx_at( ctx, (grn_id)id ) ) ){
                     return luaL_argerror( L, 2, "invalid keyType value" );
                 }
             }
@@ -323,7 +323,7 @@ static int table_create_lua( lua_State *L )
             if( name )
             {
                 id = lgrn_n2i_data( L, name );
-                if( id == -1 || !( vtype = grn_ctx_at( ctx, id ) ) ){
+                if( id == -1 || !( vtype = grn_ctx_at( ctx, (grn_id)id ) ) ){
                     return luaL_argerror( L, 2, "invalid valType value" );
                 }
             }
