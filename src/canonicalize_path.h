@@ -58,6 +58,28 @@ static char *canonicalize_path( const char *pathname, int *relative )
     }
     
     ptr = rpath;
+    
+    // preprocessing to reduce conditional branch in while loop
+    if( *ptr == '.' && ( !c || c == '/' ) )
+    {
+        // pathname: ./bar
+        if( ptr[1] == '/' ){
+            // pathname: ./bar -> /bar
+            memcpy( rpath, ptr + 1, len );
+            prev = rpath;
+            ptr = prev;
+        }
+        // pathname: ../bar
+        else if( ptr[1] == '.' && ptr[2] == '/' ){
+            // pathname: ../bar -> /bar
+            memcpy( rpath, ptr + 2, len - 1 );
+            prev = rpath;
+            ptr = prev;
+        }
+        c = *ptr;
+        ptr++;
+    }
+    
     while( *ptr )
     {
         if( *ptr == '/' )
@@ -81,42 +103,24 @@ static char *canonicalize_path( const char *pathname, int *relative )
         else if( *ptr == '.' && ( !c || c == '/' ) )
         {
             // pathname: ./bar
-            if( ptr[1] == '/' )
-            {
+            if( ptr[1] == '/' ){
                 // pathname: /foo/./bar -> /foo/bar
-                if( prev ){
-                    memcpy( prev + 1, ptr + 2, strlen( ptr + 2 ) + 1 );
-                    ptr = prev;
-                }
-                // pathname: ./bar -> /bar
-                else {
-                    memcpy( rpath, ptr + 1, len );
-                    prev = rpath;
-                    ptr = prev;
-                }
+                memcpy( prev + 1, ptr + 2, strlen( ptr + 2 ) + 1 );
+                ptr = prev;
             }
             // pathname: ../bar
             else if( ptr[1] == '.' && ptr[2] == '/' )
             {
                 // pathname: /foo/../bar -> /bar
-                if( prev )
+                while( prev != rpath )
                 {
-                    while( prev != rpath )
-                    {
-                        prev--;
-                        if( *prev == '/' ){
-                            break;
-                        }
+                    prev--;
+                    if( *prev == '/' ){
+                        break;
                     }
-                    memcpy( prev + 1, ptr + 3, strlen( ptr + 3 ) + 1 );
-                    ptr = prev;
                 }
-                // pathname: ../bar -> /bar
-                else {
-                    memcpy( rpath, ptr + 2, len - 1 );
-                    prev = rpath;
-                    ptr = prev;
-                }
+                memcpy( prev + 1, ptr + 3, strlen( ptr + 3 ) + 1 );
+                ptr = prev;
             }
         }
         c = *ptr;
