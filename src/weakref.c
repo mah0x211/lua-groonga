@@ -115,7 +115,7 @@ void lgrn_weakref_init( lua_State *L )
 {
     luaL_newmetatable( L, MODULE_MT );
     // metamethods
-    lstate_str2tbl( L, "__mode", "kv" );
+    lstate_str2tbl( L, "__mode", "v" );
     lua_pop( L, 1 );
     
     // create weak reference table for DB
