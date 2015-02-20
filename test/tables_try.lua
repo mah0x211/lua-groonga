@@ -25,6 +25,14 @@ for name, tbl in g:tables() do
     ifNotNil( tbl );
 end
 
+local iter = ifNil( g:tables() );
+
+for name, tbl in iter do
+    ifNil( tbls[name] );
+    ifNotNil( tbl );
+end
+
+
 -- getting all table name with table obj
 for name, tbl in g:tables(true) do
     ifNil( tbls[name] );
