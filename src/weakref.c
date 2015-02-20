@@ -31,6 +31,7 @@
 
 #define MODULE_MT   "groonga.weak_reference"
 
+static int REF_WEAK_DB;
 static int REF_WEAK_TABLE;
 static int REF_WEAK_COLUMN;
 
@@ -75,6 +76,17 @@ static void setref( lua_State *L, int ref, const char *name, size_t len,
 }
 
 
+// db reference
+int lgrn_refget_db( lua_State *L, const char *name, size_t len )
+{
+    return getref( L, REF_WEAK_DB, name, len );
+}
+
+void lgrn_refset_db( lua_State *L, const char *name, size_t len, int idx )
+{
+    setref( L, REF_WEAK_DB, name, len, idx );
+}
+
 // table reference
 int lgrn_refget_tbl( lua_State *L, const char *name, size_t len )
 {
@@ -105,6 +117,11 @@ void lgrn_weakref_init( lua_State *L )
     // metamethods
     lstate_str2tbl( L, "__mode", "kv" );
     lua_pop( L, 1 );
+    
+    // create weak reference table for DB
+    lua_newtable( L );
+    lstate_setmetatable( L, MODULE_MT );
+    REF_WEAK_DB = lstate_ref( L );
     
     // create weak reference table for tables
     lua_newtable( L );

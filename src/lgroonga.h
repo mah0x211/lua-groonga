@@ -30,6 +30,7 @@
 #define lgroonga_h
 
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <stdint.h>
@@ -390,6 +391,9 @@ static inline void lgrn_col_init( lgrn_col_t *c, lgrn_tbl_t *t, grn_obj *col,
 
 // MARK: weak reference utility
 void lgrn_weakref_init( lua_State *L );
+// db reference
+int lgrn_refget_db( lua_State *L, const char *name, size_t len );
+void lgrn_refset_db( lua_State *L, const char *name, size_t len, int idx );
 // table reference
 int lgrn_refget_tbl( lua_State *L, const char *name, size_t len );
 void lgrn_refset_tbl( lua_State *L, const char *name, size_t len, int idx );
