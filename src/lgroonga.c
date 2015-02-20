@@ -27,6 +27,7 @@
  */
 
 #include "lgroonga.h"
+#include "canonicalize_path.h"
 
 #define MODULE_MT   GROONGA_MT
 
@@ -453,31 +454,103 @@ static int tostring_lua( lua_State *L )
 static int new_lua( lua_State *L )
 {
     lgrn_t *g = NULL;
-    const char *path = luaL_optstring( L, 1, NULL );
+    size_t len = 0;
+    const char *path = luaL_optlstring( L, 1, NULL, &len );
+    char *pathname = NULL;
+    int is_relative = 0;
     
-    // alloc context
-    if( ( g = lua_newuserdata( L, sizeof( lgrn_t ) ) ) )
+    // create temporary db
+    if( !path )
     {
-        grn_ctx_init( &g->ctx, 0 );
-        // open
-        if( grn_db_open( &g->ctx, path ) ||
-            // create database if path does not exists
-            ( lua_isboolean( L, 2 ) && lua_toboolean( L, 2 ) && 
-              grn_db_create( &g->ctx, path, NULL ) ) ){
-            lstate_setmetatable( L, MODULE_MT );
-            g->removed = 0;
+        // alloc new context
+        if( ( g = lua_newuserdata( L, sizeof( lgrn_t ) ) ) )
+        {
+            grn_ctx_init( &g->ctx, 0 );
+            if( grn_db_create( &g->ctx, NULL, NULL ) ){
+                lstate_setmetatable( L, MODULE_MT );
+                g->removed = 0;
+                return 1;
+            }
+            // got error
+            lua_pushnil( L );
+            lua_pushstring( L, g->ctx.errbuf );
+            grn_ctx_fin( &g->ctx );
+        }
+        // nomem
+        else {
+            lua_pushnil( L );
+            lua_pushstring( L, strerror( errno ) );
+        }
+        
+        return 2;
+    }
+    // normalize path
+    else if( !( pathname = canonicalize_path( path, &is_relative ) ) ){
+        lua_pushnil( L );
+        lua_pushstring( L, strerror( errno ) );
+        return 2;
+    }
+    else if( is_relative )
+    {
+        char *cwd = getcwd( NULL, 0 );
+        
+        if( !cwd ){
+            pdealloc( pathname );
+            lua_pushnil( L );
+            lua_pushstring( L, strerror( errno ) );
+            return 2;
+        }
+        lua_pushstring( L, cwd );
+        free( cwd );
+        lua_pushstring( L, pathname );
+        free( pathname );
+        lua_concat( L, 2 );
+        path = lua_tolstring( L, -1, &len );
+    }
+    else {
+        lua_pushstring( L, pathname );
+        free( pathname );
+        path = lua_tolstring( L, -1, &len );
+    }
+    
+    // lookup from weak reference
+    if( lgrn_refget_db( L, path, len ) )
+    {
+        // return reference if there's not removed
+        if( !((lgrn_t*)lua_touserdata( L, -1 ))->removed ){
             return 1;
         }
-        // got error
+        lua_pop( L, 1 );
+    }
+    
+    // alloc new context
+    if( ( g = lua_newuserdata( L, sizeof( lgrn_t ) ) ) )
+    {
+        grn_obj *db = NULL;
+        
+        grn_ctx_init( &g->ctx, 0 );
+        g->removed = 0;
+        
+        if(( db = grn_db_open( &g->ctx, path ) ) ||
+            // create database if path does not exists
+            ( lua_isboolean( L, 2 ) && lua_toboolean( L, 2 ) &&
+            ( db = grn_db_create( &g->ctx, path, NULL ) ) ) ){
+            lstate_setmetatable( L, MODULE_MT );
+            // save reference
+            lgrn_refset_db( L, path, len, -1 );
+            return 1;
+        }
+        
+        // could not open or create db
         lua_pushnil( L );
         lua_pushstring( L, g->ctx.errbuf );
         grn_ctx_fin( &g->ctx );
+        
+        return 2;
     }
-    // nomem error
-    else {
-        lua_pushnil( L );
-        lua_pushstring( L, strerror( errno ) );
-    }
+
+    lua_pushnil( L );
+    lua_pushstring( L, strerror( errno ) );
     
     return 2;
 }
