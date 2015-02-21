@@ -11,6 +11,7 @@ this module is currently under heavy development.
 
 - groonga: https://github.com/groonga/groonga
 
+
 ## Module functions
 
 ### ver = groonga.version()
@@ -39,9 +40,14 @@ print( groonga.encoding() );
 
 **Parameters**
 
-- `enc:string`: encoding string.  
-please refer to groonga documentation for more information.  
-http://groonga.org/docs/reference/executables/groonga.html
+- `enc:string`: encoding string.
+
+---
+
+please refer to the groonga documentation for more details.  
+http://groonga.org/ja/docs/reference/api/grn_encoding.html
+
+---
 
 **Returns**
 
@@ -60,7 +66,7 @@ local db, err = groonga.new('./mydb', true );
 **Parameters**
 
 - `path:string`: path string of database.
-- `create:boolean`: create dabase if not found.
+- `create:boolean`: create new database if not found.
 
 **Returns**
 
@@ -158,9 +164,82 @@ end
 2. `err:string`: error string.
 
 
-### tbl, err = db:tableCreate( [params:table] )
+### tbl, err = db:tableCreate( [attr:table] )
 
-N/A
+create new table to database and returns an table object. if argument is a `nil`, that table is a temporary table.
+
+```lua
+-- creating temporary table
+local tmp, err = db:tableCreate();
+
+-- creating persistent table
+local tbl, err = db:tableCreate({
+    name = 'mytbl',
+    path = '/path/to/table/file',
+    -- 'PAT_KEY' | 'DAT_KEY' | 'HASH_KEY' | 'NO_KEY'
+    type = 'HASH_KEY'
+    keyType = '',
+    valType = '',
+    persistent = true,
+    withSIS = true,
+    normalize = true
+});
+```
+
+**Parameters**
+
+- `attr:table`: table attributes.
+  - `name:string`: table name
+  - `path:string`: path of table file, or a `nil`.
+  - `type:string`: `table type`.
+  - `keyType:string`: `data type` for key.
+  - `valType:string`: `data type` for value.
+  - `persistent:boolean`: set `true` to create a persistent table.
+  - `withSIS:boolean`: set `true` to ...
+  - `normalize:boolean`: set `true` to ...
+
+---
+
+please refer to the groonga documentation for more details.  
+http://groonga.org/ja/docs/reference/api/grn_table.html
+
+---
+
+**Returns**
+
+1. `tbl:userdata`: table object, or a `nil` on failure.
+2. `err:string`: error string.
+
+## Type Constants
+
+### Table Types
+
+- `'PAT_KEY'`: patricia trie.
+- `'DAT_KEY'`: double array trie.
+- `'HASH_KEY'`: hash map.
+- `'NO_KEY'`: plain array.
+
+
+### Data Types
+
+- `'OBJECT'`
+- `'BOOL'`
+- `'INT8'`
+- `'UINT8'`
+- `'INT16'`
+- `'UINT16'`
+- `'INT32'`
+- `'UINT32'`
+- `'INT64'`
+- `'UINT64'`
+- `'FLOAT'`
+- `'TIME'`
+- `'SHORT_TEXT'`
+- `'TEXT'`
+- `'LONG_TEXT'`
+- `'TOKYO_GEO_POINT'`
+- `'WGS84_GEO_POINT'`
+
 
 ## Table object
 
@@ -169,5 +248,4 @@ N/A
 ## Column object
 
 N/A
-
 
