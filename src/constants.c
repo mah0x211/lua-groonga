@@ -114,7 +114,6 @@ void lgrn_constants_init( lua_State *L )
 {
     // data type
     lua_newtable( L );
-    lstate_int2tbl( L, "DB", GRN_DB_DB );
     lstate_int2tbl( L, "OBJECT", GRN_DB_OBJECT );
     lstate_int2tbl( L, "BOOL", GRN_DB_BOOL );
     lstate_int2tbl( L, "INT8", GRN_DB_INT8 );
@@ -135,7 +134,6 @@ void lgrn_constants_init( lua_State *L )
     REF_N2I_DATA = lstate_ref( L );
     
     lua_newtable( L );
-    lstate_str2arr( L, GRN_DB_DB, "DB" );
     lstate_str2arr( L, GRN_DB_OBJECT, "OBJECT" );
     lstate_str2arr( L, GRN_DB_BOOL, "BOOL" );
     lstate_str2arr( L, GRN_DB_INT8, "INT8" );
